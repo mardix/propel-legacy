@@ -21,9 +21,7 @@ setup(
     entry_points=dict(console_scripts=['deploy-webapp=deploy_webapp:cmd']),
     install_requires=[
         'gunicorn',
-        'supervisor',
-        'celery',
-        'PyYAML'
+        'supervisor'
     ],
 
     keywords=['deploy', 'flask'],

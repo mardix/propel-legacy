@@ -3,7 +3,7 @@
 Deploy-WebPy
 
 A module to deploy python web app (ie: flask) using Gunicorn and Supervisor on Nginx.
-Celery is also added as a bonus.
+Celery is also added as a bonus, but you must 'pip install celery' fisrt
 
 @Author: Mardix
 @Copyright: 2014 Mardix
@@ -15,21 +15,17 @@ Requirements:
     Nginx
     Gunicorn
     Supervisor
-    Celery (optional)
-    Yaml
+    Celery (optional, must pip install celery)
 """
 
 import os
 import subprocess
 import socket
 import random
+import json
 
-try:
-    import yaml
-except Exception as ex:
-    print("WARNING: PyYAML is not installed")
 
-__version__ = 0.2
+__version__ = 0.3
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Deploy-WebApp"
@@ -429,23 +425,24 @@ class Celery(SupervisorMixin):
 
 
 class App(object):
-    base_dir = "/home"
-    app_name = None
-    app_dir = None
-    conf = None
+
     DEFAULT_PORT = 80
 
-    def __init__(self, path="/home/%s/www"):
+    path = None
+    deploy_conf = None
+    undeploy_conf = None
+
+    def __init__(self, path):
         self.path = path
 
-        deploy_file = self.path + "/deploy.yaml"
+        deploy_file = self.path + "/deploy_webapp.json"
         if not os.path.isfile(deploy_file):
-            raise Exception("Deploy file '%s' doesn't exist" % deploy_file)
+            raise Exception("Deploy file '%s' is required" % deploy_file)
 
         install_requirements(self.path)
 
         with open(deploy_file) as dfile:
-            conf = yaml.load(dfile)
+            conf = json.load(dfile)
             if "deploy" in conf:
                 self.deploy_conf = conf["deploy"]
             if "undeploy" in conf:
@@ -459,7 +456,7 @@ class App(object):
 
         if self.undeploy_conf:
             for app in self.undeploy_conf:
-                for ck in ["server_name"]:
+                for ck in ["app", "server_name"]:
                     if ck not in app:
                         raise TypeError("'%s' is missing" % (ck, ))
 
@@ -479,11 +476,11 @@ class App(object):
             deploy_conf = self.deploy_conf
 
         for conf in deploy_conf:
-            Gunicorn(conf, directory=self.app_dir).deploy()
+            Gunicorn(conf, directory=self.path).deploy()
 
             if "celery" in conf and conf["celery"] is True:
                 _app = conf["app"].split(":")[0]
-                Celery(app=_app, directory=self.app_dir).supervise()
+                Celery(app=_app, directory=self.path).supervise()
 
 
     def undeploy(self, app_name=None):
