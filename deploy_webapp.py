@@ -25,7 +25,7 @@ import random
 import json
 
 
-__version__ = 0.3
+__version__ = 0.4
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Deploy-WebApp"
