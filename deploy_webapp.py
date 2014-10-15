@@ -21,17 +21,19 @@ Requirements:
 
 import os
 import subprocess
-import yaml
 import socket
 import random
 
-__version__ = 0.1
+try:
+    import yaml
+except Exception as ex:
+    print("WARNING: PyYAML is not installed")
+
+__version__ = 0.2
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Deploy-WebApp"
 
-
-PY_CMD = "python2.7"
 PIP_CMD = "pip2.7"
 
 # PORT range to create random port upon creation of new instance
