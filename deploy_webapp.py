@@ -515,9 +515,11 @@ def cmd():
     cwd = os.getcwd()
 
     print ("")
+    print ("-" * 80)
     print ("%s %s " % (__NAME__, __version__))
     print ("-" * 80)
-    print("|- CWD: %s" % cwd)
+    print("Current Location: %s" % cwd)
+    print("")
 
     try:
         parser = argparse.ArgumentParser()
@@ -527,7 +529,7 @@ def cmd():
 
         arg = parser.parse_args()
 
-        if arg.d:
+        if arg.deploy:
             print("> Initiating deployment ...")
             webapp = App(cwd)
             print("\t\t Undeploy ...")
@@ -536,7 +538,7 @@ def cmd():
             webapp.deploy()
             print("\tDone!")
 
-        if arg.r:
+        if arg.reload:
             print ("> Reloading server ...")
             print("\t\t NGINX ...")
             nginx_reload()
