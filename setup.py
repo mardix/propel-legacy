@@ -1,11 +1,11 @@
 """
-Deploy-WebApp
+DeployPy
 """
 
 from setuptools import setup
-import deploy_webapp
+import deploypy
 
-PACKAGE = deploy_webapp
+PACKAGE = deploypy
 
 setup(
     name=PACKAGE.__NAME__,
@@ -15,10 +15,10 @@ setup(
     author_email='mardix@github.com',
     description=PACKAGE.__doc__,
     long_description=PACKAGE.__doc__,
-    url='http://github.com/mardix/deploy-webapp/',
-    download_url='http://github.com/mardix/deploy-webapp/tarball/master',
-    py_modules=['deploy_webapp'],
-    entry_points=dict(console_scripts=['deploy-webapp=deploy_webapp:cmd']),
+    url='http://github.com/mardix/deploy-py/',
+    download_url='http://github.com/mardix/deploy-py/tarball/master',
+    py_modules=['deploypy'],
+    entry_points=dict(console_scripts=['deploypy=deploypy:cmd']),
     install_requires=[
         'gunicorn',
         'supervisor'

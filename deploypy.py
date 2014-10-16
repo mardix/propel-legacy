@@ -1,6 +1,6 @@
 #!/usr/local/bin/python2.7
 """
-Deploy-WebPy
+Deploy-Py
 
 A module to deploy python web app (ie: flask) using Gunicorn and Supervisor on Nginx.
 Celery is also added as a bonus, but you must 'pip install celery' fisrt
@@ -9,7 +9,7 @@ Celery is also added as a bonus, but you must 'pip install celery' fisrt
 @Copyright: 2014 Mardix
 LICENSE: MIT
 
-https://github.com/mardix/deploy-webapp
+https://github.com/mardix/deploy-py
 
 Requirements:
     Nginx
@@ -25,10 +25,10 @@ import random
 import json
 
 
-__version__ = "0.4.1"
+__version__ = "0.1"
 __author__ = "Mardix"
 __license__ = "MIT"
-__NAME__ = "Deploy-WebApp"
+__NAME__ = "Deploy-Py"
 
 PIP_CMD = "pip2.7"
 
@@ -148,7 +148,9 @@ class Supervisor(object):
 
     def delete(self):
         self.ctl("remove")
-        os.remove(self.conf_dir + "/%s.conf" % self.name)
+        conf = self.conf_dir + "/%s.conf" % self.name
+        if os.path.isfile(conf):
+            os.remove(conf)
 
     def get_status(self):
         result = self.ctl("status")
@@ -362,6 +364,7 @@ class Gunicorn(SupervisorMixin):
             os.remove(conf_file)
 
         self.supervisor.delete()
+        self.reload()
         nginx_reload()
 
 
@@ -435,7 +438,7 @@ class App(object):
     def __init__(self, path):
         self.path = path
 
-        deploy_file = self.path + "/deploy_webapp.json"
+        deploy_file = self.path + "/deploy.json"
         if not os.path.isfile(deploy_file):
             raise Exception("Deploy file '%s' is required" % deploy_file)
 

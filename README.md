@@ -1,4 +1,4 @@
-# Deploy-WebApp
+# DeployPy
 
 A module to deploy python web app (ie: flask) using Gunicorn and Supervisor on Nginx.
 Celery is also added as a bonus, but you must 'pip install celery' fisrt.
@@ -8,7 +8,7 @@ By default, application will be deployed on port 80 with Nginx. Each application
 
 ### Install
 
-	pip install deploy-webapp
+	pip install deploypy
 
 
 ### How to use:
@@ -16,19 +16,19 @@ By default, application will be deployed on port 80 with Nginx. Each application
 To deploy
 
 	cd /home/mysite/wwww
-	deploy-webapp -d
+	deploypy -d
 	
 To reload the server
 
-	deploy-webapp -r
+	deploypy -r
 	
 	
-### Setup & deploy_webapp.json:
+### Setup & deploy.json:
 	
-Inside of the directory that contains the python web app, create a file `deploy_webapp.json`
+Inside of the directory that contains the python web app, create a file `deploy.json`
 
 
-**deploy_webapp.json** contains the params to properly deploy your app
+**deploy.json** contains the params to properly deploy your app
 
 
     {
@@ -66,7 +66,7 @@ Inside of the directory that contains the python web app, create a file `deploy_
 
 
 
-#### deploy_webapp.json params
+#### deploy.json params
 
 
 	deploy:
