@@ -23,9 +23,10 @@ import subprocess
 import socket
 import random
 import json
+import argparse
 
 
-__version__ = "0.1"
+__version__ = "0.2"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Deploy-Py"
@@ -512,15 +513,15 @@ class App(object):
 
 #-------------
 
+CWD = os.getcwd()
+
 def cmd():
-    import argparse
-    cwd = os.getcwd()
 
     print ("")
     print ("-" * 80)
     print ("%s %s " % (__NAME__, __version__))
     print ("-" * 80)
-    print("Current Location: %s" % cwd)
+    print("Current Location: %s" % CWD)
     print("")
 
     try:
@@ -528,26 +529,66 @@ def cmd():
 
         parser.add_argument("-d", "--deploy", help="To deploy", action="store_true")
         parser.add_argument("-r", "--reload", help="To reload the server", action="store_true")
-
+        parser.add_argument("--setup-repo", help="To setup git bare repo name in "
+                                                 "the current directory to push "
+                                                 "to [ie: --setup-repo www]")
         arg = parser.parse_args()
 
+        # Deploy app
         if arg.deploy:
             print("> Initiating deployment ...")
-            webapp = App(cwd)
-            print("\t\t Undeploy ...")
+            webapp = App(CWD)
+            print("\t Undeploy ...")
             webapp.undeploy()
-            print("\t\t Deploy ...")
+            print("\t Deploy ...")
             webapp.deploy()
-            print("\tDone!")
+            print("Done!\n")
 
+        # Reload server
         if arg.reload:
             print ("> Reloading server ...")
-            print("\t\t NGINX ...")
+            print("\t NGINX ...")
             nginx_reload()
-            print("\tDone!")
+            print("Done!\n")
+
+        # Setup new repo
+        if arg.setup_repo:
+            name = arg.setup_repo
+
+            print("> Setting up repo: %s ..." % name)
+
+            working_dir = "%s/%s" % (CWD, name)
+            bare_repo = "%s/%s.git" % (CWD, name)
+            post_receice_hook_file = "%s/hooks/post-receive" % bare_repo
+            post_receive_hook_data = "#!/bin/sh\n"
+            post_receive_hook_data += "GIT_WORK_TREE=%s git checkout -f\n" % working_dir
+
+            if not os.path.isdir(working_dir):
+                os.makedirs(working_dir)
+
+            if not os.path.isdir(bare_repo):
+                os.makedirs(bare_repo)
+                _cmd = """
+                cd %s
+                git init --bare
+                """ % bare_repo
+                run(_cmd)
+
+            if not os.path.isfile(post_receice_hook_file):
+                with open(post_receice_hook_file, "w") as f:
+                    f.write(post_receive_hook_data)
+                run("chmod +x %s " % post_receice_hook_file)
+
+            print("\tBare Repo: %s" % bare_repo)
+            print("\tDeploy Dir: %s" % working_dir)
+            print("Done!\n")
 
     except Exception as ex:
         print("EXCEPTION: %s " % ex.__str__())
+
+
+
+
 
 
 
