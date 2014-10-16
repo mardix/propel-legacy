@@ -1,5 +1,5 @@
 """
-Deploy-WebPy
+Deploy-WebApp
 """
 
 from setuptools import setup
