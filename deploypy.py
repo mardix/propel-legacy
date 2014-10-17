@@ -26,7 +26,7 @@ import json
 import argparse
 
 
-__version__ = "0.2"
+__version__ = "0.2.1"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Deploy-Py"
@@ -342,15 +342,18 @@ class Gunicorn(SupervisorMixin):
         server_name = self.conf["server_name"]
         port = self.DEFAULT_PORT if "port" not in self.conf else self.conf["port"]
         workers = self.DEFAULT_WORKERS if "gunicorn_workers" not in self.conf else self.conf["gunicorn_workers"]
-        static_dir = self.DEFAULT_STATIC_DIR if "port" not in self.conf else self.conf["static_dir"]
+        static_dir = self.DEFAULT_STATIC_DIR if "static_dir" not in self.conf else self.conf["static_dir"]
+        static_dir = self.directory + "/" + static_dir
         proxy_port = generate_random_port()
 
         self.create_nginx_conf_file(server_name, port, proxy_port, static_dir)
 
-        command = "/usr/local/bin/gunicorn -w {WORKERS} -b 0.0.0.0:{PROXY_PORT} {APP}"\
-            .format(WORKERS=workers,
-                    PROXY_PORT=proxy_port,
-                    APP=app)
+        command = "/usr/local/bin/gunicorn "\
+                  "-w {WORKERS} " \
+                  "-b 0.0.0.0:{PROXY_PORT} {APP}"\
+                .format(WORKERS=workers,
+                        PROXY_PORT=proxy_port,
+                        APP=app)
         self.supervisor.create(command=command, directory=self.directory)
         self.reload()
         nginx_reload()
@@ -374,7 +377,7 @@ class Gunicorn(SupervisorMixin):
         return "/etc/nginx/conf.d/%s_gunicorn.conf" % server_name
 
     @classmethod
-    def create_nginx_conf_file(cls, server_name, port, proxy_port, static_dir="app/static"):
+    def create_nginx_conf_file(cls, server_name, port, proxy_port, static_dir=""):
         conf_file = cls.get_nginx_conf(server_name)
 
         nginx_conf_tpl = """
@@ -391,7 +394,7 @@ server
         proxy_set_header X-Forwarded-Host $server_name;
     }}
     location /static {{
-        alias /home/{SERVER_NAME}/www/{STATIC_DIR};
+        alias {STATIC_DIR};
     }}
 }}
         """.format(PORT=port,
@@ -585,10 +588,5 @@ def cmd():
 
     except Exception as ex:
         print("EXCEPTION: %s " % ex.__str__())
-
-
-
-
-
 
 
