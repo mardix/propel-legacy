@@ -13,26 +13,43 @@ By default, application will be deployed on port 80 with Nginx. Each application
 
 ### How to use:
 
+####Deploy
+
 Deploy an app. deploy.json must exist in the directory
 
 	cd /home/mysite/wwww
 	deployapp -d
 
 
+---
+
+####Setup Git Repo
+
 Setup a git repo, which will include a bare repo to push content to, and the actual content directory
 
     cd /home/mysite
-    deployapp --setup-git www
+    deployapp --git-init www
 
 
-will create a bare repo directory two directory which one ends in `.git` that is the bare repo  :
+Will create the following:
+
+    |
+    |_ /home
+        |
+        |_ /mysite
+            |
+            |_ /www
+            |
+            |_ /www.git
 
 
-    /home/mysite/www
+`www.git` is a bare repo
 
-    /home/mysite/www.git
+`www` is where git will push the bare content to
 
+---
 
+#### Reload Server
 
 To reload the server
 
