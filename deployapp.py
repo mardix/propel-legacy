@@ -26,7 +26,7 @@ import json
 import argparse
 
 
-__version__ = "0.3"
+__version__ = "0.3.1"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "DeployApp"
@@ -532,9 +532,9 @@ def cmd():
 
         parser.add_argument("-d", "--deploy", help="To deploy", action="store_true")
         parser.add_argument("-r", "--reload", help="To reload the server", action="store_true")
-        parser.add_argument("--setup-repo", help="To setup git bare repo name in "
+        parser.add_argument("--setup-git", help="To setup git bare repo name in "
                                                  "the current directory to push "
-                                                 "to [ie: --setup-repo www]")
+                                                 "to [ie: --setup-git www]")
         arg = parser.parse_args()
 
         # Deploy app
@@ -555,8 +555,8 @@ def cmd():
             print("Done!\n")
 
         # Setup new repo
-        if arg.setup_repo:
-            name = arg.setup_repo
+        if arg.setup_git:
+            name = arg.setup_git
 
             print("> Setting up repo: %s ..." % name)
 
