@@ -3,9 +3,9 @@ DeployPy
 """
 
 from setuptools import setup
-import deploypy
+import deployapp
 
-PACKAGE = deploypy
+PACKAGE = deployapp
 
 setup(
     name=PACKAGE.__NAME__,
@@ -15,10 +15,10 @@ setup(
     author_email='mardix@github.com',
     description=PACKAGE.__doc__,
     long_description=PACKAGE.__doc__,
-    url='http://github.com/mardix/deploy-py/',
-    download_url='http://github.com/mardix/deploy-py/tarball/master',
-    py_modules=['deploypy'],
-    entry_points=dict(console_scripts=['deploypy=deploypy:cmd']),
+    url='http://github.com/mardix/deployapp/',
+    download_url='http://github.com/mardix/deployapp/tarball/master',
+    py_modules=['deployapp'],
+    entry_points=dict(console_scripts=['deployapp=deployapp:cmd']),
     install_requires=[
         'gunicorn',
         'supervisor'

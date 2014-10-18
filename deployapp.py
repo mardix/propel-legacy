@@ -1,6 +1,6 @@
 #!/usr/local/bin/python2.7
 """
-Deploy-Py
+DeployApp
 
 A module to deploy python web app (ie: flask) using Gunicorn and Supervisor on Nginx.
 Celery is also added as a bonus, but you must 'pip install celery' fisrt
@@ -26,10 +26,10 @@ import json
 import argparse
 
 
-__version__ = "0.2.1"
+__version__ = "0.3"
 __author__ = "Mardix"
 __license__ = "MIT"
-__NAME__ = "Deploy-Py"
+__NAME__ = "DeployApp"
 
 PIP_CMD = "pip2.7"
 
