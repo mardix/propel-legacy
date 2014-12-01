@@ -15,11 +15,28 @@ By default, application will be deployed on port 80 with Nginx. Each application
 
 ####Deploy
 
-Deploy an app. deploy.json must exist in the directory
+Deploy all apps. deploy.json must exist in the directory
 
 	cd /home/mysite/wwww
 	deployapp -d
 
+
+Deploy a single app
+
+	cd /home/mysite/wwww
+	deployapp -d -a app_name
+
+In the example below 'app_name' would be 'run_www'
+
+    {
+        "deploy": [
+            {
+                "server_name": "myserver.com",
+                "app": "run_www:flask_app",
+                "static_dir": "www/static"
+            }
+        ]
+    }
 
 ---
 

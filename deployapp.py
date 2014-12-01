@@ -26,7 +26,7 @@ import json
 import argparse
 
 
-__version__ = "0.4"
+__version__ = "0.5"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "DeployApp"
@@ -89,6 +89,7 @@ def nginx_restart():
     run("chkconfig %s on" % service)
     run("service %s stop" % service)
     run("service %s start" % service)
+
 
 
 def install_requirements(dir):
@@ -535,16 +536,23 @@ def cmd():
         parser.add_argument("--git-init", help="To setup git bare repo name in "
                                                  "the current directory to push "
                                                  "to [ie: --git-init www]")
+        parser.add_argument("-a", "--app", help="To deploy a specific app by name "
+                                                 " [ie: -d -a admin]")
         arg = parser.parse_args()
 
         # Deploy app
-        if arg.deploy:
+        if arg.deploy :
             print("> Initiating deployment ...")
             webapp = App(CWD)
             print("\t Undeploy ...")
             webapp.undeploy()
             print("\t Deploy ...")
-            webapp.deploy()
+
+            app_name = None
+            if arg.app:
+                app_name = arg.app
+
+            webapp.deploy(app_name)
             print("Done!\n")
 
         # Reload server
