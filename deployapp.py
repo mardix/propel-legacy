@@ -26,7 +26,7 @@ import json
 import argparse
 
 
-__version__ = "0.5"
+__version__ = "0.5.1"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "DeployApp"
@@ -100,7 +100,7 @@ def install_requirements(dir):
 class Supervisor(object):
 
     service_name = "supervisord"
-    conf_dir = "/etc/supervisord"
+    conf_dir = "/etc/supervisor"
     log_dir = "/var/log/supervisor"
     CTL = "/usr/local/bin/supervisorctl"
     group_file = "_groups.conf"
