@@ -3,6 +3,10 @@ deployapp -a
 
 A simple module to deploy flask application using NGINX, Gunicorn and Supervisor
 
+It automatically set the Gunicorn server with a random port number, which is
+then use in the NGINX as proxy.
+
+
 @Author: Mardix
 @Copyright: 2014 Mardix
 LICENSE: MIT
@@ -19,11 +23,14 @@ import os
 import subprocess
 import socket
 import random
-
 import argparse
-import yaml
+try:
+    import yaml
+except ImportError as ex:
+    print("PyYaml is missing. pip --install pyyaml")
 
-__version__ = "0.10a"
+
+__version__ = "0.10.0"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "DeployApp"
@@ -210,7 +217,7 @@ def gunicorn(app,
     app_name = "gunicorn_%s" % (server_name.replace(".", "_"))
     nginx_conf = GUNICORN_NGINX_CONF_FILE_PATTERN % server_name
 
-    if deploy:
+    if deploy is False:
         if os.path.isfile(nginx_conf):
             os.remove(nginx_conf)
         supervisor_stop(name=app_name, remove=True)
@@ -253,7 +260,7 @@ def deploy_config(directory):
 
 def deploy_webapps(directory):
     """
-    To deploy the file deployapp.json
+    To deploy webapps
     :params directory:
     """
     install_requirements(directory)
@@ -264,10 +271,10 @@ def deploy_webapps(directory):
                 gunicorn(app=app["app"],
                          server_name=app["server_name"],
                          directory=directory,
-                         static_dir=app["static_dir"],
-                         workers=app["workers"],
+                         static_dir=app["static_dir"] if "static_dir" in app else "static",
+                         workers=app["workers"] if "workers" in app else 4,
                          port=app["port"] if "port" in app else 80,
-                         deploy=False if "deploy" in app else True)
+                         deploy=False if "deploy" in app and not app["deploy"] else True)
     else:
         raise TypeError("'webapps' is missing in deployapp.yaml")
 
