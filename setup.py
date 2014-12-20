@@ -20,6 +20,7 @@ setup(
     py_modules=['deployapp'],
     entry_points=dict(console_scripts=['deployapp=deployapp:cmd']),
     install_requires=[
+        'pyyaml',
         'gunicorn',
         'supervisor'
     ],
