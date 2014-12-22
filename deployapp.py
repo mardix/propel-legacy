@@ -30,7 +30,7 @@ except ImportError as ex:
     print("PyYaml is missing. pip --install pyyaml")
 
 
-__version__ = "0.10.0"
+__version__ = "0.11.0"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "DeployApp"
@@ -169,6 +169,7 @@ def supervisor_stop(name, remove=True):
         if os.path.isfile(conf_file):
             os.remove(conf_file)
         run((SUPERVISOR_CTL + " %s remove") % name)
+    supervisor_reload()
 
 
 def supervisor_reload():
@@ -263,11 +264,10 @@ def deploy_webapps(directory):
     To deploy webapps
     :params directory:
     """
-    install_requirements(directory)
     conf_data = deploy_config(directory)
     if "webapps" in conf_data:
         for app in conf_data["webapps"]:
-            if app["app"] and app["server_name"]:
+            if "app" in app and "server_name" in app:
                 gunicorn(app=app["app"],
                          server_name=app["server_name"],
                          directory=directory,
@@ -275,21 +275,41 @@ def deploy_webapps(directory):
                          workers=app["workers"] if "workers" in app else 4,
                          port=app["port"] if "port" in app else 80,
                          deploy=False if "deploy" in app and not app["deploy"] else True)
+            else:
+                raise TypeError("Webapp is missing: 'server_name' or 'app' in deployapp.yaml")
     else:
         raise TypeError("'webapps' is missing in deployapp.yaml")
 
 
-def run_scripts(directory=None):
+def run_scripts(directory):
     """
     To run a scripts
-    :params key: the key in the scripts
-    :params conf: dict - the config
-    :params directory: string - the name of the directory if conf is empty
+    :params directory:
     """
     conf_data = deploy_config(directory)
     if "scripts" in conf_data:
         for script in conf_data["scripts"]:
             run(script)
+
+def deploy_runners(directory):
+    """
+    Runners are supervisor scripts
+    :params directory:
+    """
+    conf_data = deploy_config(directory)
+    if "runners" in conf_data:
+        for runner in conf_data["runners"]:
+            if "name" in runner and "command" in runner and "directory" in runner:
+                if "remove" in runner and runner["remove"]:
+                    supervisor_stop(name=runner["name"], remove=True)
+                else:
+                    supervisor_start(name=runner["name"],
+                                     command=runner["command"],
+                                     directory=runner["directory"],
+                                     user="root" if "user" not in runner else runner["user"],
+                                     environment="" if "environment" not in runner else runner["environment"])
+            else:
+                raise TypeError("RUNNER is missing: 'name' or 'command' or 'directory' in deployapp.yaml")
 
 
 def git_init_bare_repo(directory, repo):
@@ -334,7 +354,8 @@ def cmd():
         parser = argparse.ArgumentParser()
         parser.add_argument("-a", "--all", help="Deploy all sites and run all scripts", action="store_true")
         parser.add_argument("-w", "--webapps", help="To deploy the apps", action="store_true")
-        parser.add_argument("--scripts", help="To run some scripts", action="store_true")
+        parser.add_argument("--scripts", help="To execute scripts in the scripts list", action="store_true")
+        parser.add_argument("--runners", help="Runners are scripts to run with Supervisor ", action="store_true")
         parser.add_argument("-r", "--reload", help="To reload the servers", action="store_true")
         parser.add_argument("--git-init", help="To setup git bare repo name in "
                                                  "the current directory to push "
@@ -342,19 +363,36 @@ def cmd():
         arg = parser.parse_args()
 
         if arg.all:
-            arg.webapps = True
             arg.scripts = True
+            arg.webapps = True
+            arg.runners = True
+
+        # Order of execution is important:
+        #   - install_requirements
+        #   - scripts
+        #   - webapps
+        #   - runners
+        # -------------------
+
+        # Automatically install requirement
+        if arg.webapps or arg.scripts or arg.runners:
+            install_requirements(CWD)
 
         # Run scripts
         if arg.scripts:
-            print("> Running scripts ... ")
+            print("> Running SCRIPTS ...")
             run_scripts(CWD)
             print("Done!\n")
 
         # Deploy app
         if arg.webapps:
-            print("> Deploying WebApps from %s ... " % CWD)
+            print("> Deploying WEBAPPS ... ")
             deploy_webapps(CWD)
+            print("Done!\n")
+
+        if arg.runners:
+            print("> Deploying RUNNERS ...")
+            deploy_runners(CWD)
             print("Done!\n")
 
         # Reload server
@@ -376,5 +414,3 @@ def cmd():
 
     except Exception as ex:
         print("EXCEPTION: %s " % ex.__str__())
-
-

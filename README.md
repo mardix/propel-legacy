@@ -8,6 +8,7 @@ By default, application will be deployed on port 80 with Nginx.
 
 Each application must have its own server name.
 
+It also run scripts on the server and supervisor runners
 
 ### Install
 
@@ -208,6 +209,15 @@ Inside of the directory that contains the python web app, create a file `deploya
       - "hostname"
       - "ls -l"
 
+    runners:
+      -
+         name: ""
+         command: ""
+         directory: ""
+         user: ""
+         environment: ""
+         remove: False  # Bool
+
 
 
 #### Description
@@ -221,6 +231,14 @@ Inside of the directory that contains the python web app, create a file `deploya
        - workers int: the total workers for gunicorn
 
 	scripts: # A list of scripts path to execute
+
+	runners: # A list of dict to run supervisor scripts
+	    - name : the name of the app
+	    - command: The command
+	    - directory : directory
+	    - user: user
+	    - environment:
+	    - remove: bool. If true and the runner is active, it will remove it
 
 
 

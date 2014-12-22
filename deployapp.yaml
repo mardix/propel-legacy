@@ -1,7 +1,7 @@
 # deployapp.yaml configuration
 # To deploy all: 'deployapp -a'
 ---
-# Web applications: list of dictionaries
+# Web applications: list of dict
   webapps:
     -
       server_name: "myserver.com"
@@ -20,8 +20,22 @@
       static_dir: "worker_server/static"
       port: 80
       workers: 4
-# Scripts: list of scripts
+# Scripts: list of scripts to execute
   scripts:
     - "hostname"
     - "ls -l"
-
+# Runners: List of dict of supervisor scripts
+  runners:
+    -
+      name: ""
+      command: ""
+      directory: ""
+      user: ""
+      environment: ""
+      remove: False  # Bool
+    -
+      name: ""
+      command: ""
+      directory: ""
+      user: ""
+      environment: ""
