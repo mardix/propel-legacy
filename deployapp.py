@@ -390,6 +390,7 @@ def cmd():
             deploy_webapps(CWD)
             print("Done!\n")
 
+        # Run runners
         if arg.runners:
             print("> Deploying RUNNERS ...")
             deploy_runners(CWD)
