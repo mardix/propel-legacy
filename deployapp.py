@@ -21,6 +21,7 @@ Requirements:
 
 import os
 import subprocess
+import multiprocessing
 import socket
 import random
 import argparse
@@ -30,7 +31,7 @@ except ImportError as ex:
     print("PyYaml is missing. pip --install pyyaml")
 
 
-__version__ = "0.11.0"
+__version__ = "0.12.0"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "DeployApp"
@@ -202,7 +203,7 @@ def gunicorn(app,
              server_name,
              directory=None,
              static_dir="static",
-             workers=4,
+             workers=None,
              port=80,
              deploy=False):
     """
@@ -214,7 +215,8 @@ def gunicorn(app,
     :params port:
     :params deploy:
     """
-
+    if not workers:
+        workers = (multiprocessing.cpu_count() * 2) + 1
     app_name = "gunicorn_%s" % (server_name.replace(".", "_"))
     nginx_conf = GUNICORN_NGINX_CONF_FILE_PATTERN % server_name
 
@@ -272,7 +274,7 @@ def deploy_webapps(directory):
                          server_name=app["server_name"],
                          directory=directory,
                          static_dir=app["static_dir"] if "static_dir" in app else "static",
-                         workers=app["workers"] if "workers" in app else 4,
+                         workers=app["workers"] if "workers" in app else None,
                          port=app["port"] if "port" in app else 80,
                          deploy=False if "deploy" in app and not app["deploy"] else True)
             else:
@@ -342,16 +344,8 @@ def git_init_bare_repo(directory, repo):
     return bare_repo
 
 def cmd():
-
-    print ("")
-    print ("-" * 80)
-    print ("%s %s " % (__NAME__, __version__))
-    print ("-" * 80)
-    print("Current Location: %s" % CWD)
-    print("")
-
     try:
-        parser = argparse.ArgumentParser()
+        parser = argparse.ArgumentParser(description="%s %s" % (__NAME__, __version__))
         parser.add_argument("-a", "--all", help="Deploy all sites and run all scripts", action="store_true")
         parser.add_argument("-w", "--webapps", help="To deploy the apps", action="store_true")
         parser.add_argument("--scripts", help="To execute scripts in the scripts list", action="store_true")
@@ -376,6 +370,7 @@ def cmd():
 
         # Automatically install requirement
         if arg.webapps or arg.scripts or arg.runners:
+            print("> INSTALL REQUIREMENTS ...")
             install_requirements(CWD)
 
         # Run scripts
