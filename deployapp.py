@@ -31,7 +31,7 @@ except ImportError as ex:
     print("PyYaml is missing. pip --install pyyaml")
 
 
-__version__ = "0.12.0"
+__version__ = "0.13.0"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "DeployApp"
@@ -135,6 +135,14 @@ def install_requirements(directory):
     if os.path.isfile(requirements):
         run(PIP_CMD + " install -r %s" % requirements)
 
+def supervisor_status(name):
+    """
+    Return the supervisor status
+    """
+    _status = ' '.join(run((SUPERVISOR_CTL + " %s status") % name).split()).split(" ")
+    if _status[0] == name:
+        return _status[1]
+    return None
 
 def supervisor_start(name, command, directory="/", user="root", environment=""):
     """
@@ -147,7 +155,8 @@ def supervisor_start(name, command, directory="/", user="root", environment=""):
     """
     log_file = SUPERVISOR_LOG_PATH % name
     conf_file = SUPERVISOR_CONF_PATH % name
-
+    if supervisor_status(name) == "RUNNING":
+        run((SUPERVISOR_CTL + " %s stop") % name)
     with open(conf_file, "wb") as f:
         f.write(SUPERVISOR_TPL.format(name=name,
                            command=command,
