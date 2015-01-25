@@ -19,7 +19,7 @@ It also run scripts on the server and supervisor runners
 
 ##Deploy WebApps
 
-Create a file in your application root directory called: `deploysite.yaml`
+Create a file in your application root directory called: `deploy.yaml`
 
 Add the following config in there:
 
@@ -72,7 +72,7 @@ For custom gunicorn configuration, set the gunicorn (dict) settings
 
 ##Run Scripts 
 
-Add the following in your deploysite.yaml to run scripts before the deployment of the app.
+Add the following in your deploy.yaml to run scripts before the deployment of the app.
 
 `scripts` is a **LIST** containing the full path of execution of your scripts
 
@@ -179,7 +179,8 @@ It can be combined with git init
 
 To reload the server
 
-	deploysite -r
+	deploysite --reload-server
+
 
 
 ####requirements.txt
@@ -190,49 +191,69 @@ If a requirements.txt exist, it will run it before deploying
 
 ---
 
-### deploysite.yaml:
+### deploy.yaml:
 
 
-Inside of the directory that contains the python web app, create a file `deploysite.yaml`
+Inside of the directory that contains the python web app, create a file `deploy.yaml`
 
-**deploysite.yaml** contains the params to properly deploy your app, run scripts etc
+**deploy.yaml** contains the params to properly deploy your app, run scripts etc
 
     ---
+      # Sites: contains a dict of all the sites to deplot or remove
       sites:
-        -
-          server_name: "myserver.com"
-          app: "run_myserver:flask_app"
-          static_dir: "myserver/static"
-        -
-          server_name: "otherserver.com"
-          app: "run_otherserver:flask_app"
-          static_dir: "otherserver/static"
-          gunicorn:
-              workers: 4
-              preload: ""
-              port: 80
-        -
-          server_name: "worker.server.com"
-          app: "run_worker_server:flask_app"
-          static_dir: "worker_server/static"
-          gunicorn:
-              workers: 4
-              preload: ""
-              port: 80
+        # Python app must have 'app'
+            -
+              server_name: "myserver.com"
+              app: "run_myserver:flask_app"
+              static_dir: "myserver/static"
+            -
+              server_name: "otherserver.com"
+              app: "run_otherserver:flask_app"
+              static_dir: "otherserver/static"
+              gunicorn:
+                  workers: 4
+                  preload: ""
+                  port: 80
+        # ADD SSL
+              ssl:
+                cert: "ssl/site.crt"
+                key: "ssl/site.key"
+            -
+              server_name: "toremove.server.com"
+              app: "run_worker_server:flask_app"
+              static_dir: "worker_server/static"
 
-    scripts:
-      - "hostname"
-      - "ls -l"
+              # Will remove this server
+              remove: True
 
-    runners:
-      -
-         name: ""
-         command: ""
-         directory: ""
-         user: ""
-         environment: ""
-         remove: False  # Bool
+        # PHP or HTML site. PHP/HTML must have php:True
+            -
+              php: True
+              server_name: "myphpserver.com"
+              ssl:
+                cert: "ssl/site.crt"
+                key: "ssl/site.key"
 
+    # Scripts: list of scripts to execute
+      scripts:
+        - "hostname"
+        - "ls -l"
+
+    # Runners: List of dict of supervisor scripts
+      runners:
+        -
+          name: ""
+          command: ""
+          directory: ""
+          user: ""
+          environment: ""
+          remove: False  # Bool
+        -
+          name: ""
+          command: ""
+          directory: ""
+          user: ""
+          environment: ""
 
 
 #### Description

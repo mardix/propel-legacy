@@ -1,5 +1,5 @@
 # deploy.yaml configuration
-# To deploy all: 'deployapp -a'
+# To deploy all: 'deploysite -a'
 ---
 # Sites: list of dict of web sites application
   sites:
@@ -17,6 +17,7 @@
           workers: 4
           preload: ""
           port: 80
+# ADD SSL
       ssl:
         cert: "ssl/site.crt"
         key: "ssl/site.key"
@@ -38,6 +39,7 @@
   scripts:
     - "hostname"
     - "ls -l"
+
 # Runners: List of dict of supervisor scripts
   runners:
     -
