@@ -31,13 +31,14 @@ except ImportError as ex:
     print("PyYaml is missing. pip --install pyyaml")
 
 
-__version__ = "0.13.0"
+__version__ = "0.20.0"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "DeployApp"
 
 PIP_CMD = "pip2.7"
 CWD = os.getcwd()
+DEFAULT_PORT = 80
 
 # PORT range to create random port upon creation of new instance
 PORT_RANGE = [8000, 9000]
@@ -139,9 +140,11 @@ def supervisor_status(name):
     """
     Return the supervisor status
     """
-    _status = ' '.join(run((SUPERVISOR_CTL + " %s status") % name).split()).split(" ")
-    if _status[0] == name:
-        return _status[1]
+    _status = ' '.join(run((SUPERVISOR_CTL + " %s status") % name).split())
+    if _status:
+        _status = _status.split(" ")
+        if _status[0] == name:
+            return _status[1]
     return None
 
 def supervisor_start(name, command, directory="/", user="root", environment=""):
@@ -208,28 +211,22 @@ def create_nginx_proxy(server_name, port=80, proxy_port=None, static_dir="static
         f.write(conf)
 
 
-def gunicorn(app,
-             server_name,
-             directory=None,
-             static_dir="static",
-             workers=None,
-             port=80,
-             deploy=False):
+def gunicorn(app, server_name, directory=None, static_dir="static", **config):
     """
     :params app:
     :params server_name:
     :params directory:
     :params static_dir:
-    :params workers:
-    :params port:
-    :params deploy:
+    :params config: **dict gunicorn config
     """
-    if not workers:
-        workers = (multiprocessing.cpu_count() * 2) + 1
+
     app_name = "gunicorn_%s" % (server_name.replace(".", "_"))
     nginx_conf = GUNICORN_NGINX_CONF_FILE_PATTERN % server_name
 
-    if deploy is False:
+    if "workers" not in config:
+        config["workers"] = (multiprocessing.cpu_count() * 2) + 1
+
+    if "remove" in config and config["remove"] is True:
         if os.path.isfile(nginx_conf):
             os.remove(nginx_conf)
         supervisor_stop(name=app_name, remove=True)
@@ -240,12 +237,19 @@ def gunicorn(app,
 
     proxy_port = generate_random_port()
 
+    port = DEFAULT_PORT
+    if "port" in config:
+        port = config["port"]
+        del(config["port"])
+
+    settings = " ".join(["--%s %s" % (x[0], x[1]) for x in config.items()])
     command = "/usr/local/bin/gunicorn "\
-              "-w {WORKERS} " \
               "-b 0.0.0.0:{PROXY_PORT} {APP}"\
-              .format(WORKERS=workers,
+              " {SETTINGS}"\
+              .format(SETTINGS=settings,
                       PROXY_PORT=proxy_port,
                       APP=app)
+
     static_dir = directory + "/" + static_dir
     create_nginx_proxy(server_name=server_name,
                        port=port,
@@ -259,37 +263,38 @@ def gunicorn(app,
 
 def deploy_config(directory):
     """
-    Return the json file
+    Return the yaml file
     :params directory:
     """
-    json_file = directory + "/deployapp.yaml"
-    if not os.path.isfile(json_file):
-        raise Exception("Deploy file '%s' is required" % json_file)
-    with open(json_file) as jfile:
+    yaml_file = directory + "/deployapp.yaml"
+    if not os.path.isfile(yaml_file):
+        raise Exception("Deploy file '%s' is required" % yaml_file)
+    with open(yaml_file) as jfile:
         conf_data = yaml.load(jfile)
     return conf_data
 
-
-def deploy_webapps(directory):
+def deploy_sites(directory):
     """
-    To deploy webapps
+    To deploy sites
     :params directory:
     """
     conf_data = deploy_config(directory)
-    if "webapps" in conf_data:
-        for app in conf_data["webapps"]:
+    if "sites" in conf_data:
+        for app in conf_data["sites"]:
             if "app" in app and "server_name" in app:
+                gunicorn_conf = {}
+                if "gunicorn" in app:
+                    gunicorn_conf = app["gunicorn"]
                 gunicorn(app=app["app"],
                          server_name=app["server_name"],
                          directory=directory,
                          static_dir=app["static_dir"] if "static_dir" in app else "static",
-                         workers=app["workers"] if "workers" in app else None,
-                         port=app["port"] if "port" in app else 80,
-                         deploy=False if "deploy" in app and not app["deploy"] else True)
+                         **gunicorn_conf
+                         )
             else:
-                raise TypeError("Webapp is missing: 'server_name' or 'app' in deployapp.yaml")
+                raise TypeError("sites is missing: 'server_name' or 'app' in deployapp.yaml")
     else:
-        raise TypeError("'webapps' is missing in deployapp.yaml")
+        raise TypeError("'sites' is missing in deployapp.yaml")
 
 
 def run_scripts(directory):
@@ -356,10 +361,10 @@ def cmd():
     try:
         parser = argparse.ArgumentParser(description="%s %s" % (__NAME__, __version__))
         parser.add_argument("-a", "--all", help="Deploy all sites and run all scripts", action="store_true")
-        parser.add_argument("-w", "--webapps", help="To deploy the apps", action="store_true")
+        parser.add_argument("--sites", help="To deploy the apps", action="store_true")
         parser.add_argument("--scripts", help="To execute scripts in the scripts list", action="store_true")
         parser.add_argument("--runners", help="Runners are scripts to run with Supervisor ", action="store_true")
-        parser.add_argument("-r", "--reload", help="To reload the servers", action="store_true")
+        parser.add_argument("--reload-server", help="To reload the servers", action="store_true")
         parser.add_argument("--git-init", help="To setup git bare repo name in "
                                                  "the current directory to push "
                                                  "to [ie: --git-init www]")
@@ -367,18 +372,18 @@ def cmd():
 
         if arg.all:
             arg.scripts = True
-            arg.webapps = True
+            arg.sites = True
             arg.runners = True
 
         # Order of execution is important:
         #   - install_requirements
         #   - scripts
-        #   - webapps
+        #   - sites
         #   - runners
         # -------------------
 
         # Automatically install requirement
-        if arg.webapps or arg.scripts or arg.runners:
+        if arg.sites or arg.scripts or arg.runners:
             print("> INSTALL REQUIREMENTS ...")
             install_requirements(CWD)
 
@@ -389,9 +394,12 @@ def cmd():
             print("Done!\n")
 
         # Deploy app
-        if arg.webapps:
-            print("> Deploying WEBAPPS ... ")
-            deploy_webapps(CWD)
+        if arg.sites:
+            print("> Deploying SITES ... ")
+            try:
+                deploy_sites(CWD)
+            except Exception as ex:
+                print("Error: %s" % ex.message)
             print("Done!\n")
 
         # Run runners
@@ -401,7 +409,7 @@ def cmd():
             print("Done!\n")
 
         # Reload server
-        if arg.reload:
+        if arg.reload_server:
             print ("> Reloading server ...")
             print(">> NGINX ...")
             nginx_reload()

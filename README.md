@@ -24,7 +24,7 @@ Create a file in your application root directory called: `deployapp.yaml`
 Add the following config in there:
 
     ---
-      webapps:
+      sites:
         -
           server_name: "myserver.com"
           app: "run_myserver:flask_app"
@@ -39,17 +39,13 @@ Substitute `myserver/static` with your application's static file
 
 Then on the command line:
 
-	deployapp -w
-
-	or
-
-	deployapp --webapps
+	deployapp --sites
 
 
 #### Deploy multiple applications:
 
     ---
-      webapps:
+      sites:
         -
           server_name: "myserver.com"
           app: "run_myserver:flask_app"
@@ -58,19 +54,19 @@ Then on the command line:
           server_name: "otherserver.com"
           app: "run_otherserver:flask_app"
           static_dir: "otherserver/static"
-          port: 80
-          workers: 4
+          gunicorn:
+              workers: 4
+              preload: ""
+              port: 80
         -
           server_name: "worker.server.com"
           app: "run_worker_server:flask_app"
           static_dir: "worker_server/static"
-          port: 80
-          workers: 4
 
 
-This config above will deploy 3 apps. The `port` can be changed to use a different port on the proxy.
+This config above will deploy 3 apps.
 
-And you can specify the number of `workers` for Gunicorn
+For custom gunicorn configuration, set the gunicorn (dict) settings
 
 ---
 
@@ -87,7 +83,7 @@ Add the following in your deployapp.yaml to run scripts before the deployment of
 So it could look something like this:
 
     ---
-      webapps:
+      sites:
         -
           server_name: "myserver.com"
           app: "run_myserver:flask_app"
@@ -96,14 +92,15 @@ So it could look something like this:
           server_name: "otherserver.com"
           app: "run_otherserver:flask_app"
           static_dir: "otherserver/static"
-          port: 80
-          workers: 4
+          gunicorn:
+              workers: 4
+              preload: ""
+              port: 80
         -
           server_name: "worker.server.com"
           app: "run_worker_server:flask_app"
           static_dir: "worker_server/static"
-          port: 80
-          workers: 4
+
 
     scripts:
       - "hostname"
@@ -130,7 +127,7 @@ Upon launching `deployapp --all` , it will execute in the following order:
 	
 1) scripts
 
-2) webapps
+2) sites
 
 ---
 
@@ -182,12 +179,10 @@ If a requirements.txt exist, it will run it before deploying
 
 Inside of the directory that contains the python web app, create a file `deployapp.yaml`
 
-
 **deployapp.yaml** contains the params to properly deploy your app, run scripts etc
 
-
     ---
-      webapps:
+      sites:
         -
           server_name: "myserver.com"
           app: "run_myserver:flask_app"
@@ -196,14 +191,18 @@ Inside of the directory that contains the python web app, create a file `deploya
           server_name: "otherserver.com"
           app: "run_otherserver:flask_app"
           static_dir: "otherserver/static"
-          port: 80
-          workers: 4
+          gunicorn:
+              workers: 4
+              preload: ""
+              port: 80
         -
           server_name: "worker.server.com"
           app: "run_worker_server:flask_app"
           static_dir: "worker_server/static"
-          port: 80
-          workers: 4
+          gunicorn:
+              workers: 4
+              preload: ""
+              port: 80
 
     scripts:
       - "hostname"
@@ -223,12 +222,15 @@ Inside of the directory that contains the python web app, create a file `deploya
 #### Description
 
 
-	webapps: # A list of dict with the following params
+	sites: # A list of dict with the following params
        - app string: $module_name:$variable_name. The application to load
        - server_name string: The name of the server ie: mysite.com
        - static_dir string: The static directory relative to
-       - port int : The nginx port to run on. By default: 80
-       - workers int: the total workers for gunicorn
+       - gunicorn: dict of gunicorn config (http://docs.gunicorn.org/en/develop/configure.html)
+            workers: 4  (If not provided, it will assign the workers)
+            preload: ""
+            port: 80 (If not provided, it will assign it to port 80)
+            max-requests: 5000
 
 	scripts: # A list of scripts path to execute
 

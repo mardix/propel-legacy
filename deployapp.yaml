@@ -1,25 +1,26 @@
 # deployapp.yaml configuration
 # To deploy all: 'deployapp -a'
 ---
-# Web applications: list of dict
-  webapps:
+# Sites: list of dict of web sites application
+  sites:
     -
       server_name: "myserver.com"
       app: "run_myserver:flask_app"
       static_dir: "myserver/static"
-      deploy: false
     -
       server_name: "otherserver.com"
       app: "run_otherserver:flask_app"
       static_dir: "otherserver/static"
-      port: 80
-      workers: 4
+      gunicorn:
+          workers: 4
+          preload: ""
+          port: 80
     -
       server_name: "worker.server.com"
       app: "run_worker_server:flask_app"
       static_dir: "worker_server/static"
-      port: 80
-      workers: 4
+      deploy: false
+
 # Scripts: list of scripts to execute
   scripts:
     - "hostname"
