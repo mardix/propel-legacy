@@ -35,7 +35,7 @@ try:
 except ImportError as ex:
     print("PyYaml is missing. pip --install pyyaml")
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "DeploySite"
@@ -531,7 +531,7 @@ def update_git_post_receive_hook(directory, repo, self_deploy):
     post_receive_command = ""
 
     if self_deploy:
-        post_receive_command = "deployapp -a"
+        post_receive_command = "deploysite -a"
 
     post_receive_hook_data ="""
 #!/bin/sh
