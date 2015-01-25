@@ -157,6 +157,22 @@ Will create the following:
 
 `www` is where git will push the bare content to
 
+#### Set/Unset self deploy
+
+You can set it to self deploy on push `--set-self-deploy ${repo}` or unset self deploy if it has been set `--unset-self-deploy ${repo}`
+
+
+    cd /home/mysite
+    deployapp --set-self-deploy www
+
+    # or
+
+    deployapp --unset-self-deploy www
+
+It can be combined with git init
+
+    deployapp --git-init www --set-self-deploy www
+
 ---
 
 #### Reload Server
@@ -230,7 +246,7 @@ Inside of the directory that contains the python web app, create a file `deploya
             workers: 4  (If not provided, it will assign the workers)
             preload: ""
             port: 80 (If not provided, it will assign it to port 80)
-            max-requests: 5000
+            max-requests: 500
 
 	scripts: # A list of scripts path to execute
 
@@ -242,6 +258,24 @@ Inside of the directory that contains the python web app, create a file `deploya
 	    - environment:
 	    - remove: bool. If true and the runner is active, it will remove it
 
+
+### Note: The Gunicorn config is set with the following by default
+
+    ---
+      sites:
+        -
+          ...
+          gunicorn:
+              workers: 4
+              preload: " "
+              port: 80
+              max-requests: 500
+              worker-class: gevent
+
+
+- To change a default Gunicorn config set the default one to the desired value
+
+- To remove a default Gunicorn config set the default one to False
 
 
 ---
@@ -256,7 +290,9 @@ Inside of the directory that contains the python web app, create a file `deploya
  
 - Gunicorn
 
+- Gevent
 
 ---
 
-License: MIT - Copyright 2014 Mardix
+License: MIT - Copyright 2014/2015 Mardix
+

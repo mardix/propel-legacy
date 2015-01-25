@@ -31,7 +31,7 @@ except ImportError as ex:
     print("PyYaml is missing. pip --install pyyaml")
 
 
-__version__ = "0.20.0"
+__version__ = "0.21.0"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "DeployApp"
@@ -39,6 +39,8 @@ __NAME__ = "DeployApp"
 PIP_CMD = "pip2.7"
 CWD = os.getcwd()
 DEFAULT_PORT = 80
+DEFAULT_MAX_REQUESTS = 500
+DEFAULT_WORKER_CLASS = "gevent"
 
 # PORT range to create random port upon creation of new instance
 PORT_RANGE = [8000, 9000]
@@ -223,14 +225,35 @@ def gunicorn(app, server_name, directory=None, static_dir="static", **config):
     app_name = "gunicorn_%s" % (server_name.replace(".", "_"))
     nginx_conf = GUNICORN_NGINX_CONF_FILE_PATTERN % server_name
 
-    if "workers" not in config:
-        config["workers"] = (multiprocessing.cpu_count() * 2) + 1
-
     if "remove" in config and config["remove"] is True:
         if os.path.isfile(nginx_conf):
             os.remove(nginx_conf)
         supervisor_stop(name=app_name, remove=True)
         return True
+
+    if "workers" not in config:
+        config["workers"] = (multiprocessing.cpu_count() * 2) + 1
+
+    # Auto 'max-requests', set to False to not set it
+    if "max-requests" in config and config["max-request"] is False:
+        del(config["max-requests"])
+    elif "max-requests" not in config:
+        config["max-requests"] = DEFAULT_MAX_REQUESTS
+
+    # Auto 'preload', set to False to not set it
+    if "preload" in "config" and config["preload"] is False:
+        del(config["preload"])
+    elif "preload" not in config:
+        config["preload"] = " "
+
+    # Auto 'worker-class', set to False to not set it
+    if "k" in config:
+        config["worker-class"] = config["k"]
+        del(config["k"])
+    if "worker-class" in "config" and config["worker-class"] is False:
+        del(config["worker-class"])
+    elif "worker-class" not in config:
+        config["worker-class"] = DEFAULT_WORKER_CLASS
 
     if not directory:
         raise TypeError("'directory' path is missing")
@@ -328,34 +351,61 @@ def deploy_runners(directory):
                 raise TypeError("RUNNER is missing: 'name' or 'command' or 'directory' in deployapp.yaml")
 
 
+def get_git_repo(directory, repo):
+    working_dir = "%s/%s" % (directory, repo)
+    bare_repo = "%s.git" % working_dir
+    return working_dir, bare_repo
+
 def git_init_bare_repo(directory, repo):
     """
-    Git init bare repo
-    :params directory:
-    :params repo:
-    :return string: the bare repo path
+    Create a bare repo
+    :params directory: the directory
+    :params repo: The name of the repo
+    :returns bool: True if created
     """
-    working_dir = "%s/%s" % (directory, repo)
-    bare_repo = "%s/%s.git" % (directory, repo)
-    post_receice_hook_file = "%s/hooks/post-receive" % bare_repo
-    post_receive_hook_data = "#!/bin/sh\n"
-    post_receive_hook_data += "GIT_WORK_TREE=%s git checkout -f\n" % working_dir
-
+    working_dir, bare_repo = get_git_repo(directory, repo)
     if not os.path.isdir(working_dir):
         os.makedirs(working_dir)
     if not os.path.isdir(bare_repo):
         os.makedirs(bare_repo)
-        _cmd = """
-        cd %s
-        git init --bare
-        """ % bare_repo
-        run(_cmd)
+        run("cd %s && git init --bare" % bare_repo)
+        return True
+    return False
 
-    if not os.path.isfile(post_receice_hook_file):
-        with open(post_receice_hook_file, "w") as f:
-            f.write(post_receive_hook_data)
-        run("chmod +x %s " % post_receice_hook_file)
-    return bare_repo
+def update_git_post_receive_hook(directory, repo, self_deploy):
+    """
+    Update the post receive hook
+    :params directory: the directory
+    :params repo: The name of the repo
+    :params self_deploy: if true, it will self deploy by running deployapp -a
+    :return string: the bare repo path
+    """
+
+    working_dir, bare_repo = get_git_repo(directory, repo)
+    post_receice_hook_file = "%s/hooks/post-receive" % bare_repo
+    post_receive_command = ""
+
+    if self_deploy:
+        post_receive_command = "deployapp -a"
+
+    post_receive_hook_data ="""
+#!/bin/sh
+while read oldrev newrev refname
+do
+    branch=$(git rev-parse --symbolic --abbrev-ref $refname)
+    if [ "master" == "$branch" ]; then
+        GIT_WORK_TREE={WORKING_DIR} git checkout -f
+        cd {WORKING_DIR}
+        {POST_RECEIVE_COMMAND}
+    fi
+done
+""".format(WORKING_DIR=working_dir,
+           POST_RECEIVE_COMMAND=post_receive_command)
+
+    with open(post_receice_hook_file, "wb") as f:
+        f.write(post_receive_hook_data)
+    run("chmod +x %s " % post_receice_hook_file)
+
 
 def cmd():
     try:
@@ -365,9 +415,15 @@ def cmd():
         parser.add_argument("--scripts", help="To execute scripts in the scripts list", action="store_true")
         parser.add_argument("--runners", help="Runners are scripts to run with Supervisor ", action="store_true")
         parser.add_argument("--reload-server", help="To reload the servers", action="store_true")
+        parser.add_argument("--repo")
         parser.add_argument("--git-init", help="To setup git bare repo name in "
                                                  "the current directory to push "
                                                  "to [ie: --git-init www]")
+        parser.add_argument("--set-self-deploy", help="To set deployapp to run on git push "
+                                                      "[--set-self-deploy www]")
+        parser.add_argument("--unset-self-deploy", help="If deployapp was set to run on git push, it will disable it "
+                                                        "[--unset-self-deploy www]")
+
         arg = parser.parse_args()
 
         if arg.all:
@@ -420,9 +476,25 @@ def cmd():
         # Setup new repo
         if arg.git_init:
             repo = arg.git_init
-            print("> Setup Git Repo '%s' @ %s ..." % (repo, CWD))
-            bare_repo = git_init_bare_repo(CWD, repo)
-            print("\tBare Repo: %s" % bare_repo)
+            bare_repo = "%s/%s.git" % (CWD, repo)
+            print("> Setup Git Repo @ %s ..." % bare_repo)
+            if git_init_bare_repo(CWD, repo):
+                update_git_post_receive_hook(CWD, repo, False)
+            print("\tBare Repo created @ %s" % bare_repo)
+            print("Done!\n")
+
+        # Set self deploy
+        if arg.set_self_deploy:
+            repo = arg.set_self_deploy
+            print("> Setting self deploy...")
+            update_git_post_receive_hook(CWD, repo, True)
+            print("Done!\n")
+
+        # Unset self deploy
+        if arg.unset_self_deploy:
+            repo = arg.unset_self_deploy
+            print("> Unsetting self deploy...")
+            update_git_post_receive_hook(CWD, repo, False)
             print("Done!\n")
 
     except Exception as ex:

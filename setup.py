@@ -22,7 +22,8 @@ setup(
     install_requires=[
         'pyyaml',
         'gunicorn',
-        'supervisor'
+        'supervisor',
+        'gevent'
     ],
     keywords=['deploy', 'flask'],
     platforms='any',
