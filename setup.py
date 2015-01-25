@@ -1,11 +1,11 @@
 """
-deployapp
+deploysite
 """
 
 from setuptools import setup
-import deployapp
+import deploysite
 
-PACKAGE = deployapp
+PACKAGE = deploysite
 
 setup(
     name=PACKAGE.__NAME__,
@@ -15,10 +15,10 @@ setup(
     author_email='mardix@github.com',
     description=PACKAGE.__doc__,
     long_description=PACKAGE.__doc__,
-    url='http://github.com/mardix/deployapp/',
-    download_url='http://github.com/mardix/deployapp/tarball/master',
-    py_modules=['deployapp'],
-    entry_points=dict(console_scripts=['deployapp=deployapp:cmd']),
+    url='http://github.com/mardix/deploysite/',
+    download_url='http://github.com/mardix/deploysite/tarball/master',
+    py_modules=['deploysite'],
+    entry_points=dict(console_scripts=['deploysite=deploysite:cmd']),
     install_requires=[
         'pyyaml',
         'gunicorn',

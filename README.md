@@ -1,10 +1,10 @@
-# DeployApp
+# DeploySite
 
 A simple module to deploy flask application using Gunicorn, Supervisor and NGinx as a proxy
 
 By default, application will be deployed on port 80 with Nginx.
 
-**DeployApp** assign a random proxy for Gunicorn to work
+**DeploySite** assign a random proxy for Gunicorn to work
 
 Each application must have its own server name.
 
@@ -12,14 +12,14 @@ It also run scripts on the server and supervisor runners
 
 ### Install
 
-	pip install deployapp
+	pip install deploysite
 
 
 ### How to use:
 
 ##Deploy WebApps
 
-Create a file in your application root directory called: `deployapp.yaml`
+Create a file in your application root directory called: `deploysite.yaml`
 
 Add the following config in there:
 
@@ -39,7 +39,7 @@ Substitute `myserver/static` with your application's static file
 
 Then on the command line:
 
-	deployapp --sites
+	deploysite --sites
 
 
 #### Deploy multiple applications:
@@ -72,7 +72,7 @@ For custom gunicorn configuration, set the gunicorn (dict) settings
 
 ##Run Scripts 
 
-Add the following in your deployapp.yaml to run scripts before the deployment of the app.
+Add the following in your deploysite.yaml to run scripts before the deployment of the app.
 
 `scripts` is a **LIST** containing the full path of execution of your scripts
 
@@ -108,22 +108,22 @@ So it could look something like this:
       
 To execute script alone:
 	
-	deployapp --scripts
+	deploysite --scripts
 
 
 ## Deploy All
 
 You can deploy and run everything at once:
 
-	deployapp -a 
+	deploysite -a 
 	
 	or 
 	
-	deployapp --all
+	deploysite --all
 	
 ### Order of execution:
 
-Upon launching `deployapp --all` , it will execute in the following order: 
+Upon launching `deploysite --all` , it will execute in the following order: 
 	
 1) scripts
 
@@ -138,7 +138,7 @@ Upon launching `deployapp --all` , it will execute in the following order:
 Setup a git repo, which will include a bare repo to push content to, and the actual content directory
 
     cd /home/mysite
-    deployapp --git-init www
+    deploysite --git-init www
 
 
 Will create the following:
@@ -163,15 +163,15 @@ You can set it to self deploy on push `--set-self-deploy ${repo}` or unset self 
 
 
     cd /home/mysite
-    deployapp --set-self-deploy www
+    deploysite --set-self-deploy www
 
     # or
 
-    deployapp --unset-self-deploy www
+    deploysite --unset-self-deploy www
 
 It can be combined with git init
 
-    deployapp --git-init www --set-self-deploy www
+    deploysite --git-init www --set-self-deploy www
 
 ---
 
@@ -179,7 +179,7 @@ It can be combined with git init
 
 To reload the server
 
-	deployapp -r
+	deploysite -r
 
 
 ####requirements.txt
@@ -190,12 +190,12 @@ If a requirements.txt exist, it will run it before deploying
 
 ---
 
-### deployapp.yaml:
+### deploysite.yaml:
 
 
-Inside of the directory that contains the python web app, create a file `deployapp.yaml`
+Inside of the directory that contains the python web app, create a file `deploysite.yaml`
 
-**deployapp.yaml** contains the params to properly deploy your app, run scripts etc
+**deploysite.yaml** contains the params to properly deploy your app, run scripts etc
 
     ---
       sites:
