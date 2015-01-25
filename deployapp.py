@@ -1,14 +1,14 @@
 """
 deployapp -a
 
-A simple module to deploy flask application using NGINX, Gunicorn and Supervisor
+A simple module to deploy flask application using NGINX, Gunicorn, Supervisor and Gevent
 
 It automatically set the Gunicorn server with a random port number, which is
-then use in the NGINX as proxy.
+then used in the NGINX as proxy.
 
 
 @Author: Mardix
-@Copyright: 2014 Mardix
+@Copyright: 2015 Mardix
 LICENSE: MIT
 
 https://github.com/mardix/deployapp
@@ -31,7 +31,7 @@ except ImportError as ex:
     print("PyYaml is missing. pip --install pyyaml")
 
 
-__version__ = "0.21.0"
+__version__ = "0.22.0"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "DeployApp"
@@ -91,7 +91,10 @@ def run(cmd):
     """
     Shortcut to subprocess.call
     """
-    subprocess.call(cmd.strip(), shell=True)
+    process = subprocess.Popen(cmd, shell=True,
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+    return process.communicate()[0]
 
 
 def is_port_open(port, host="127.0.0.1"):
@@ -138,13 +141,17 @@ def install_requirements(directory):
     if os.path.isfile(requirements):
         run(PIP_CMD + " install -r %s" % requirements)
 
+def supervisortctl(action, name):
+    return run("%s %s %s" % (SUPERVISOR_CTL, action, name))
+
 def supervisor_status(name):
     """
     Return the supervisor status
     """
-    _status = ' '.join(run((SUPERVISOR_CTL + " %s status") % name).split())
-    if _status:
-        _status = _status.split(" ")
+
+    status = supervisortctl("status", name)
+    if status:
+        _status = ' '.join(status.split()).split(" ")
         if _status[0] == name:
             return _status[1]
     return None
@@ -161,7 +168,7 @@ def supervisor_start(name, command, directory="/", user="root", environment=""):
     log_file = SUPERVISOR_LOG_PATH % name
     conf_file = SUPERVISOR_CONF_PATH % name
     if supervisor_status(name) == "RUNNING":
-        run((SUPERVISOR_CTL + " %s stop") % name)
+        supervisortctl("stop", name)
     with open(conf_file, "wb") as f:
         f.write(SUPERVISOR_TPL.format(name=name,
                            command=command,
@@ -170,7 +177,7 @@ def supervisor_start(name, command, directory="/", user="root", environment=""):
                            user=user,
                            environment=environment))
     supervisor_reload()
-    run((SUPERVISOR_CTL + " start %s") % name)
+    supervisortctl("start", name)
 
 def supervisor_stop(name, remove=True):
     """
@@ -179,11 +186,11 @@ def supervisor_stop(name, remove=True):
     :remove: If True will also delete the conf file
     """
     conf_file = SUPERVISOR_CONF_PATH % name
-    run((SUPERVISOR_CTL + " %s stop") % name)
+    supervisortctl("stop", name)
     if remove:
         if os.path.isfile(conf_file):
             os.remove(conf_file)
-        run((SUPERVISOR_CTL + " %s remove") % name)
+        supervisortctl("remove", name)
     supervisor_reload()
 
 
@@ -191,8 +198,8 @@ def supervisor_reload():
     """
     Reload supervisor with the changes
     """
-    run(SUPERVISOR_CTL + " reread")
-    run(SUPERVISOR_CTL + " update")
+    supervisortctl("reread", "")
+    supervisortctl("update", "")
 
 
 def create_nginx_proxy(server_name, port=80, proxy_port=None, static_dir="static"):
