@@ -35,7 +35,7 @@ try:
 except ImportError as ex:
     print("PyYaml is missing. pip --install pyyaml")
 
-__version__ = "0.2.5"
+__version__ = "0.2.6"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "DeploySite"
@@ -415,7 +415,7 @@ def deploy_sites(directory):
 
                     gunicorn_conf = site["gunicorn"] if "gunicorn" in site else {}
                     static_dir = site["static_dir"] if "static_dir" in site else "static"
-                    gunicorn(app=app["application"],
+                    gunicorn(app=site["application"],
                              server_name=server_name,
                              directory=directory,
                              static_dir=static_dir,
@@ -567,7 +567,7 @@ def cmd():
     try:
         parser = argparse.ArgumentParser(description="%s %s" % (__NAME__, __version__))
         parser.add_argument("-a", "--all", help="Deploy all sites and run all scripts", action="store_true")
-        parser.add_argument("--sites", help="To deploy the apps", action="store_true")
+        parser.add_argument("--sites", help="To deploy the sites", action="store_true")
         parser.add_argument("--scripts", help="To execute scripts in the scripts list", action="store_true")
         parser.add_argument("--runners", help="Runners are scripts to run with Supervisor ", action="store_true")
         parser.add_argument("--reload-server", help="To reload the servers", action="store_true")
