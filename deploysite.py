@@ -35,7 +35,7 @@ try:
 except ImportError as ex:
     print("PyYaml is missing. pip --install pyyaml")
 
-__version__ = "1.0.1"
+__version__ = "0.2.0"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "DeploySite"
@@ -394,28 +394,34 @@ def deploy_sites(directory):
     """
     conf_data = deploy_config(directory)
     if "sites" in conf_data:
-        for app in conf_data["sites"]:
+        for site in conf_data["sites"]:
+            if "app_type" in site:
+                if "server_name" not in site:
+                    raise TypeError("'server_name' is missing in deploy.yaml")
 
-            if "server_name" not in app:
-                raise TypeError("'server_name' is missing in deploy.yaml")
+                app_type = site["app_type"].upper()
+                server_name = site["server_name"]
+                remove = True if "remove" in site and site["remove"] is True else False
+                ssl = site["ssl"] if "ssl" in site else None
 
-            if "php" in app and app["php"] is True:  # To deploy PHP/HTML site
-                remove = True if "remove" in app and app["remove"] is True else False
-                ssl = app["ssl"] if "ssl" in app else None
-                deploy_phphtml_site(server_name=app["server_name"],
-                                    directory=directory,
-                                    remove=remove,
-                                    ssl=ssl)
+                if "PHP" == app_type:
+                    deploy_phphtml_site(server_name=server_name,
+                                        directory=directory,
+                                        remove=remove,
+                                        ssl=ssl)
+                elif "PYTHON" == app_type:
+                    if "application" not in site:
+                        raise TypeError("'application' is missing")
 
-            elif "app" in app:  # Deploy Python sites via Gunicorn
-                gunicorn_conf = {}
-                if "gunicorn" in app:
-                    gunicorn_conf = app["gunicorn"]
-                gunicorn(app=app["app"],
-                         server_name=app["server_name"],
-                         directory=directory,
-                         static_dir=app["static_dir"] if "static_dir" in app else "static",
-                         **gunicorn_conf)
+                    gunicorn_conf = site["gunicorn"] if "gunicorn" in site else {}
+                    static_dir = site["static_dir"] if "static_dir" in site else "static"
+                    gunicorn(app=app["application"],
+                             server_name=server_name,
+                             directory=directory,
+                             static_dir=static_dir,
+                             **gunicorn_conf)
+            else:
+                raise TypeError("'app_type' is missing in site")
     else:
         raise TypeError("'sites' is missing in deploy.yaml")
 
@@ -564,14 +570,13 @@ def cmd():
         parser.add_argument("--scripts", help="To execute scripts in the scripts list", action="store_true")
         parser.add_argument("--runners", help="Runners are scripts to run with Supervisor ", action="store_true")
         parser.add_argument("--reload-server", help="To reload the servers", action="store_true")
-        parser.add_argument("--repo")
+        parser.add_argument("-r", "--repo", help="The repo name [-r www --git-init --self-deploy]")
         parser.add_argument("--git-init", help="To setup git bare repo name in "
                                                  "the current directory to push "
-                                                 "to [ie: --git-init www]")
-        parser.add_argument("--set-self-deploy", help="To set deployapp to run on git push "
-                                                      "[--set-self-deploy www]")
-        parser.add_argument("--unset-self-deploy", help="If deployapp was set to run on git push, it will disable it "
-                                                        "[--unset-self-deploy www]")
+                                                 "to [ie: -r www --git-init]")
+        parser.add_argument("--git-push-deploy", help="On git push, to deploy instantly. set to 0 or N to disallow "
+                                                      "[-r www --git-push-deploy Y|N]", default=True)
+
 
         arg = parser.parse_args()
 
@@ -586,6 +591,13 @@ def cmd():
         #   - sites
         #   - runners
         # -------------------
+
+        print("*" * 80)
+        print("%s %s" % (__NAME__, __version__))
+        print("")
+
+        # The repo name to perform git stuff on
+        repo = arg.repo or None
 
         # Automatically install requirement
         if arg.sites or arg.scripts or arg.runners:
@@ -621,27 +633,24 @@ def cmd():
 
         # Setup new repo
         if arg.git_init:
-            repo = arg.git_init
+            print("> Create Git Bare repo ...")
+            if not repo:
+                raise TypeError("Missing 'repo' name")
             bare_repo = "%s/%s.git" % (CWD, repo)
-            print("> Setup Git Repo @ %s ..." % bare_repo)
+            print("Repo: %s" % bare_repo)
             if git_init_bare_repo(CWD, repo):
                 update_git_post_receive_hook(CWD, repo, False)
-            print("\tBare Repo created @ %s" % bare_repo)
             print("Done!\n")
 
-        # Set self deploy
-        if arg.set_self_deploy:
-            repo = arg.set_self_deploy
-            print("> Setting self deploy...")
-            update_git_post_receive_hook(CWD, repo, True)
+        # Git push deploy
+        if arg.git_push_deploy:
+            print("> Git Push Deploy ...")
+            if not repo:
+                raise TypeError("Missing 'repo' name")
+            deploy = True if arg.git_push_deploy in [True, 1, "1", "y", "Y"] else False
+            update_git_post_receive_hook(CWD, repo, deploy)
             print("Done!\n")
 
-        # Unset self deploy
-        if arg.unset_self_deploy:
-            repo = arg.unset_self_deploy
-            print("> Unsetting self deploy...")
-            update_git_post_receive_hook(CWD, repo, False)
-            print("Done!\n")
 
     except Exception as ex:
-        print("EXCEPTION: %s " % ex.__str__())
+        print("ERROR: %s " % ex.__str__())

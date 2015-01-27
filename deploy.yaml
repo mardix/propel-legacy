@@ -1,46 +1,60 @@
 # deploy.yaml configuration
 # To deploy all: 'deploysite -a'
+# For all sites, server_name is required, app_type is required
+
 ---
 # Sites: list of dict of web sites application
   sites:
 
-# Python app must have 'sites'
+# Python app must have, must set app_type: PYTHON
     -
+      app_type: "PYTHON"
       server_name: "myserver.com"
-      app: "run_myserver:flask_app"
+      application: "run_myserver:flask_app"
       static_dir: "myserver/static"
+
+# Python app with Gunicorn settings
     -
+      app_type: "PYTHON"
       server_name: "otherserver.com"
-      app: "run_otherserver:flask_app"
+      application: "run_otherserver:flask_app"
       static_dir: "otherserver/static"
       gunicorn:
           workers: 4
           preload: ""
           port: 80
-# ADD SSL
-      ssl:
-        cert: "ssl/site.crt"
-        key: "ssl/site.key"
+
+# To remove existing app. Set 'remove: True'
     -
+      app_type: "PYTHON"
       server_name: "toremove.server.com"
-      app: "run_worker_server:flask_app"
+      application: "run_worker_server:flask_app"
       static_dir: "worker_server/static"
       remove: True
 
-# PHP or HTML site
+# Add SSL, by settings ssl: {cert: "", key: ""}
     -
-      server_name: "myphpserver.com"
-      php: True
+      app_type: "PYTHON"
+      server_name: "myserver.com"
+      application: "run_myserver:flask_app"
+      static_dir: "myserver/static"
       ssl:
         cert: "ssl/site.crt"
         key: "ssl/site.key"
 
+# PHP or HTML site, set app_type: PHP
+    -
+      app_type: "PHP"
+      server_name: "myphpserver.com"
+
+#
 # Scripts: list of scripts to execute
   scripts:
     - "hostname"
     - "ls -l"
 
-# Runners: List of dict of supervisor scripts
+#
+# Runners: List of dict of supervisor scripts to run
   runners:
     -
       name: ""
