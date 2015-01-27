@@ -35,7 +35,7 @@ try:
 except ImportError as ex:
     print("PyYaml is missing. pip --install pyyaml")
 
-__version__ = "0.2.6"
+__version__ = "0.2.7"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "DeploySite"
@@ -319,20 +319,19 @@ def gunicorn(app, server_name, directory=None, static_dir="static", **config):
         ssl = config["ssl"]
         del(config["ssl"])
 
+    # Set workers
     if "workers" not in config:
         config["workers"] = (multiprocessing.cpu_count() * 2) + 1
+
+    # Auto 'threads'
+    if "threads" not in config:
+        config["threads"] = 4
 
     # Auto 'max-requests', set to False to not set it
     if "max-requests" in config and config["max-request"] is False:
         del(config["max-requests"])
     elif "max-requests" not in config:
         config["max-requests"] = DEFAULT_MAX_REQUESTS
-
-    # Auto 'preload', set to False to not set it
-    if "preload" in "config" and config["preload"] is False:
-        del(config["preload"])
-    elif "preload" not in config:
-        config["preload"] = " "
 
     # Auto 'worker-class', set to False to not set it
     if "k" in config:
