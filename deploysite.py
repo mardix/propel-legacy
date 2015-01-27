@@ -35,7 +35,7 @@ try:
 except ImportError as ex:
     print("PyYaml is missing. pip --install pyyaml")
 
-__version__ = "0.2.0"
+__version__ = "0.2.5"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "DeploySite"
@@ -442,7 +442,8 @@ def deploy_phphtml_site(server_name, directory=None, remove=False, ssl=None):
         if os.path.isfile(apache_config_file):
             os.remove(apache_config_file)
     else:
-        logs_dir = "%s/logs" % os.path.dirname(directory)
+        _dir = os.path.dirname(directory)
+        logs_dir = "%s/%s.logs" % (_dir, _dir.split("/")[0])
 
         if not os.path.isdir(logs_dir):
             os.makedirs(logs_dir)
@@ -511,7 +512,7 @@ def git_init_bare_repo(directory, repo):
         > /$repo.git
     """
     working_dir, bare_repo = get_git_repo(directory, repo)
-    logs_dir = "%s/logs" % directory
+    logs_dir = "%s.logs" % working_dir
 
     if not os.path.isdir(logs_dir):
         os.makedirs(logs_dir)
@@ -573,9 +574,9 @@ def cmd():
         parser.add_argument("-r", "--repo", help="The repo name [-r www --git-init --self-deploy]")
         parser.add_argument("--git-init", help="To setup git bare repo name in "
                                                  "the current directory to push "
-                                                 "to [ie: -r www --git-init]")
+                                                 "to [ie: -r www --git-init]", action="store_true")
         parser.add_argument("--git-push-deploy", help="On git push, to deploy instantly. set to 0 or N to disallow "
-                                                      "[-r www --git-push-deploy Y|N]", default=True)
+                                                      "[-r www --git-push-deploy Y|N]")
 
 
         arg = parser.parse_args()
