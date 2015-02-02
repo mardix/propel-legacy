@@ -23,7 +23,8 @@ setup(
         'pyyaml',
         'gunicorn',
         'supervisor',
-        'gevent'
+        'gevent',
+        'virtualenvwrapper'
     ],
     keywords=['deploy', 'flask'],
     platforms='any',

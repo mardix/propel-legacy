@@ -1,12 +1,27 @@
 """
-DeploySite -a
+DeploySite -d
 
-A simple module to deploy flask/Python/PHP/HTML sites
+A simple module that allows you to deploy site and run application in a virtualenv (for python)
 
-A simple module to deploy flask application using NGINX, Gunicorn, Supervisor and Gevent
+It runs pre_scripts and post_scripts deployment
 
-It automatically set the Gunicorn server with a random port number, which is
-then used in the NGINX as proxy.
+For website, it can deploy Python and PHP/HTML site by create the settings and config files necessary
+
+For application it just execute the scripts
+
+DeploySite uses Gunicorn/Supervisort/Gevent/Nginx to launch Python app
+FOr PHP or HTML site, Apache/Nginx
+
+For Python site, it uses Nginx as a proxy
+
+Features:
+    - Deploy Python/PHP/HTML site
+    -
+
+A simple module to deploy flask/Python, PHP/HTML sites
+
+
+Virtualenv
 
 ** TESTED ON CENTOS AND WITH PYTHON 2.7
 
@@ -22,37 +37,44 @@ Requirements:
     Gunicorn
     Supervisor
     Gevent
+    Virtualenvwrapper
 """
 
 import os
+import datetime
 import subprocess
 import multiprocessing
 import socket
 import random
 import argparse
+import shutil
 try:
     import yaml
 except ImportError as ex:
     print("PyYaml is missing. pip --install pyyaml")
 
-__version__ = "0.2.7"
+__version__ = "0.6.2"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "DeploySite"
 
-PIP_CMD = "pip2.7"
 CWD = os.getcwd()
-PORT_RANGE = [8000, 9000]  # Port range for gunicorn proxy
-DEFAULT_PORT = 80
-DEFAULT_MAX_REQUESTS = 500
-DEFAULT_WORKER_CLASS = "gevent"
+NGINX_DEFAULT_PORT = 80
+APACHE_DEFAULT_PORT = 8080
 
-DEFAULT_APACHE_PORT = 8080
+GUNICORN_PORT_RANGE = [8000, 9000]  # Port range for gunicorn proxy
+GUNICORN_DEFAULT_MAX_REQUESTS = 500
+GUNICORN_DEFAULT_WORKER_CLASS = "gevent"
 
+VIRTUALENV = None
+VERBOSE = False
+VIRTUALENV_DIRECTORY = "/root/.virtualenvs"
+VIRTUALENV_DEFAULT_PACKAGES = ["gunicorn", "gevent"]
+LOCAL_BIN = "/usr/local/bin"
 
+DEPLOY_CONFIG = None
 # ------------------------------------------------------------------------------
 # TEMPLATES
-
 
 # SUPERVISOR
 SUPERVISOR_CTL = "/usr/local/bin/supervisorctl"
@@ -72,30 +94,45 @@ stderr_logfile={log}
 environment={environment}
 """
 
-# GUNICORN
-GUNICORN_NGINX_CONF_FILE_PATTERN = "/etc/nginx/conf.d/gunicorn_%s.conf"
+# CONF FILE
+NGINX_CONF_FILE_PATTERN = "/etc/nginx/conf.d/%s.conf"
+APACHE_CONF_FILE_PATTERN = "/etc/nginx/conf.d/%s.conf"
 
 # NGINX SSL
 NGINX_SSL_TPL = """
+# SSL
+    if ($scheme = "http") {{
+        return 301 https://{SERVER_NAME}$request_uri;
+    }}
+
     listen 443 ssl;
-    ssl_certificate {CERTIFICATE};
+    ssl_certificate {CERT};
     ssl_certificate_key {KEY};
+    
+    ssl_session_cache shared:SSL:1m;
+    ssl_session_timeout  5m;
+    ssl_ciphers  HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers   on;
+"""
+
+NGINX_WWW_TO_NON_WWW_TPL = """
+# www to non-www for both http and https
+server {{
+    listen 80;
+    listen 443;
+    server_name www.{SERVER_NAME};
+    return 301 $scheme://{SERVER_NAME}$request_uri;
+}}
 """
 
 # NGINX FOR APP
 APP_NGINX_TPL = """
-# www to non-www for both http and https
-server {{
-    listen 80;
-    listen 443 ssl;
-    server_name www.{SERVER_NAME};
-    return 301 $scheme://{SERVER_NAME}$request_uri;
-}}
-
 server {{
     listen {PORT};
-    {SSL_CONFIG}
     server_name {SERVER_NAME};
+
+    {SSL_CONFIG}
+
     location / {{
         proxy_pass http://127.0.0.1:{PROXY_PORT}/;
         proxy_redirect off;
@@ -104,25 +141,21 @@ server {{
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Host $server_name;
     }}
+
     location /static {{
         alias {STATIC_DIR};
     }}
 }}
-"""
+
+%%NGINX_WWW_TO_NON_WWW%%
+
+""".replace("%%NGINX_WWW_TO_NON_WWW%%", NGINX_WWW_TO_NON_WWW_TPL)
 
 # NGINX FOR PHP/HTML APP
 PHPHTML_NGINX_FRONTEND_TPL = """
-# www to non-www for both http and https
-server {{
-    listen 80;
-    listen 443 ssl;
-    server_name www.{SERVER_NAME};
-    return 301 $scheme://{SERVER_NAME}$request_uri;
-}}
-
 server {{
     listen   80;
-    {SSL}
+    {SSL_CONFIG}
     server_name {SERVER_NAME};
     root {DIRECTORY};
     index index.php index.html index.htm;
@@ -139,7 +172,10 @@ server {{
         deny all;
     }}
 }}
-"""
+
+%%NGINX_WWW_TO_NON_WWW%%
+
+""".replace("%%NGINX_WWW_TO_NON_WWW%%", NGINX_WWW_TO_NON_WWW_TPL)
 
 # APACHE BACKEND
 PHPHTML_APACHE_BACKEND_TPL = """
@@ -158,13 +194,60 @@ NameVirtualHost *:8080
 </VirtualHost>
 """
 
+# POST RECEIVE HOOK
+GIT_POST_RECEIVE_HOOK_TPL = """
+#!/bin/sh
+while read oldrev newrev refname
+do
+    branch=$(git rev-parse --symbolic --abbrev-ref $refname)
+    if [ "master" == "$branch" ]; then
+        GIT_WORK_TREE={WORKING_DIR} git checkout -f
+        cd {WORKING_DIR}
+        {POST_RECEIVE_COMMAND}
+    fi
+done
+"""
+
 # ------------------------------------------------------------------------------
 
-def run(cmd):
-    process = subprocess.Popen(cmd, shell=True,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
+def run(cmd, verbose=True):
+    """ Shortcut to subprocess.call """
+    if verbose and VERBOSE:
+        subprocess.call(cmd.strip(), shell=True)
+    else:
+        process = subprocess.Popen(cmd, shell=True,
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
+        return process.communicate()[0]
+
+def runvenv(command, virtualenv=None):
+    """
+    run with virtualenv with the help of .bashrc
+    :params command:
+    :params  virtualenv: The venv name
+    """
+    kwargs = dict()
+    if not VERBOSE:
+        kwargs = dict(stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if virtualenv:
+        command = "workon %s; %s; deactivate" % (virtualenv, command)
+    cmd = ["/bin/bash", "-i", "-c", command]
+    process = subprocess.Popen(cmd, **kwargs)
     return process.communicate()[0]
+
+def get_venv_bin(bin_program=None, virtualenv=None):
+    """
+    Get the bin path of a virtualenv program
+    """
+    bin = (VIRTUALENV_DIRECTORY + "/%s/bin") % virtualenv if virtualenv else LOCAL_BIN
+    return (bin + "/%s") % bin_program if bin_program else bin 
+
+def v_print(text):
+    """
+    Verbose print. Will print only if VERBOSE is ON
+    """
+    if VERBOSE:
+        print(text)
 
 def is_port_open(port, host="127.0.0.1"):
     try:
@@ -177,7 +260,7 @@ def is_port_open(port, host="127.0.0.1"):
 
 def generate_random_port():
     while True:
-        port = random.randrange(PORT_RANGE[0], PORT_RANGE[1])
+        port = random.randrange(GUNICORN_PORT_RANGE[0], GUNICORN_PORT_RANGE[1])
         if not is_port_open(port):
             return port
 
@@ -195,11 +278,28 @@ def apache_restart():
     run("service httpd stop")
     run("service httpd start")
 
-def install_requirements(directory):
-    requirements = directory + "/requirements.txt"
-    if os.path.isfile(requirements):
-        run(PIP_CMD + " install -r %s" % requirements)
+def install_requirements(directory, virtualenv=None):
+    requirements_file = directory + "/requirements.txt"
+    if os.path.isfile(requirements_file):
+        pip = get_venv_bin(bin_program="pip", virtualenv=virtualenv)
+        runvenv("%s install -r %s" % (pip, requirements_file), virtualenv=virtualenv)
 
+# VirtualenvWrapper
+def virtualenv_setup(name, remake=False):
+    if remake:
+        virtualenv_remove(name)
+    virtualenv_make(name)
+
+def virtualenv_make(name):
+    runvenv("mkvirtualenv %s" % name)
+    pip = get_venv_bin(bin_program="pip", virtualenv=name)
+    packages = " ".join([p for p in VIRTUALENV_DEFAULT_PACKAGES])
+    runvenv("%s install %s" % (pip, packages), virtualenv=name)
+
+def virtualenv_remove(name):
+    runvenv("rmvirtualenv %s" % name)
+
+# Supervisor
 def supervisortctl(action, name):
     return run("%s %s %s" % (SUPERVISOR_CTL, action, name))
 
@@ -207,15 +307,14 @@ def supervisor_status(name):
     """
     Return the supervisor status
     """
-
-    status = supervisortctl("status", name)
+    status = run("%s %s %s" % (SUPERVISOR_CTL, "status", name), verbose=False)
     if status:
         _status = ' '.join(status.split()).split(" ")
         if _status[0] == name:
             return _status[1]
     return None
 
-def supervisor_start(name, command, directory="/", user="root", environment=""):
+def supervisor_start(name, command, directory="/", user="root", environment=None):
     """
     To Start/Set  a program with supervisor
     :params name: The name of the program
@@ -230,11 +329,11 @@ def supervisor_start(name, command, directory="/", user="root", environment=""):
         supervisortctl("stop", name)
     with open(conf_file, "wb") as f:
         f.write(SUPERVISOR_TPL.format(name=name,
-                           command=command,
-                           log=log_file,
-                           directory=directory,
-                           user=user,
-                           environment=environment))
+                                      command=command,
+                                      log=log_file,
+                                      directory=directory,
+                                      user=user,
+                                      environment=environment or ""))
     supervisor_reload()
     supervisortctl("start", name)
 
@@ -259,65 +358,40 @@ def supervisor_reload():
     supervisortctl("reread", "")
     supervisortctl("update", "")
 
-def get_nginx_ssl_config(ssl, directory):
+# NGinx, Gunicorn, PHP/HTML
+def create_nginx_ssl_config(ssl, directory, server_name):
     """
     :param ssl: Must be a dict of {cert:"", key:""}. Path are relative to directory
     """
     # Setup SSL. Must be a dict of {cert:"", key:""}. Path are relative to the working dir
     ssl_config = ""
-    if ssl:
+    if isinstance(ssl, dict) and "cert" in ssl and "key" in ssl:
         ssl_cert = directory + "/" + ssl["cert"]
         ssl_key = directory + "/" + ssl["key"]
         ssl_config = NGINX_SSL_TPL.format(CERT=ssl_cert,
-                                          KEY=ssl_key)
+                                          KEY=ssl_key,
+                                          SERVER_NAME=server_name)
     return ssl_config
 
-def create_app_nginx_proxy(server_name, port=80, proxy_port=None,
-                           static_dir="static",
-                           directory=None,
-                           ssl=None):
-    """
-    Create NGINX PROXY config file
-    :params server_name:
-    :params port:
-    :params proxy_port:
-    :params static_dir:
-    :param directory: the working dir
-    :param ssl: a dict of {cert:"", key:""}. Path are relative to the working dir
-    """
-    nginx_conf = GUNICORN_NGINX_CONF_FILE_PATTERN % server_name
-    ssl_config = get_nginx_ssl_config(ssl=ssl, directory=directory)
-    conf = APP_NGINX_TPL.format(PORT=port,
-                                  PROXY_PORT=proxy_port,
-                                  SERVER_NAME=server_name,
-                                  STATIC_DIR=static_dir,
-                                  SSL_CONFIG=ssl_config)
-    with open(nginx_conf, "wb") as f:
-        f.write(conf)
-
-def gunicorn(app, server_name, directory=None, static_dir="static", **config):
+def gunicorn(app, server_name, directory=None, static_dir="static", ssl=None,
+             virtualenv=None, remove=False, **config):
     """
     :params app:
     :params server_name:
     :params directory:
     :params static_dir:
+    :params ssl: dict of {cert:"", key:""}
+    :params remove: bool
     :params config: **dict gunicorn config
     """
-
     app_name = "gunicorn_%s" % (server_name.replace(".", "_"))
-    nginx_conf = GUNICORN_NGINX_CONF_FILE_PATTERN % server_name
+    nginx_conf = NGINX_CONF_FILE_PATTERN % server_name
 
-    if "remove" in config and config["remove"] is True:
+    if remove:
         if os.path.isfile(nginx_conf):
             os.remove(nginx_conf)
         supervisor_stop(name=app_name, remove=True)
-        return True
-
-    # Setup SSL. Must be a dict of {certificate:"", key:""}
-    ssl = None
-    if "ssl" in config:
-        ssl = config["ssl"]
-        del(config["ssl"])
+        reload_server()
 
     # Set workers
     if "workers" not in config:
@@ -331,7 +405,7 @@ def gunicorn(app, server_name, directory=None, static_dir="static", **config):
     if "max-requests" in config and config["max-request"] is False:
         del(config["max-requests"])
     elif "max-requests" not in config:
-        config["max-requests"] = DEFAULT_MAX_REQUESTS
+        config["max-requests"] = GUNICORN_DEFAULT_MAX_REQUESTS
 
     # Auto 'worker-class', set to False to not set it
     if "k" in config:
@@ -340,91 +414,46 @@ def gunicorn(app, server_name, directory=None, static_dir="static", **config):
     if "worker-class" in "config" and config["worker-class"] is False:
         del(config["worker-class"])
     elif "worker-class" not in config:
-        config["worker-class"] = DEFAULT_WORKER_CLASS
+        config["worker-class"] = GUNICORN_DEFAULT_WORKER_CLASS
 
     if not directory:
         raise TypeError("'directory' path is missing")
 
     proxy_port = generate_random_port()
 
-    port = DEFAULT_PORT
+    port = NGINX_DEFAULT_PORT
     if "port" in config:
         port = config["port"]
         del(config["port"])
 
     settings = " ".join(["--%s %s" % (x[0], x[1]) for x in config.items()])
-    command = "/usr/local/bin/gunicorn "\
-              "-b 0.0.0.0:{PROXY_PORT} {APP}"\
-              " {SETTINGS}"\
-              .format(SETTINGS=settings,
+    gunicorn_bin = get_venv_bin(bin_program="gunicorn", virtualenv=virtualenv)
+    command = "{GUNICORN_BIN} -b 0.0.0.0:{PROXY_PORT} {APP} {SETTINGS}"\
+              .format(GUNICORN_BIN=gunicorn_bin,
                       PROXY_PORT=proxy_port,
-                      APP=app)
-
-    static_dir = directory + "/" + static_dir
-    create_app_nginx_proxy(server_name=server_name,
-                       port=port,
-                       proxy_port=proxy_port,
-                       static_dir=static_dir,
-                       directory=directory,
-                       ssl=ssl)
+                      APP=app, 
+                      SETTINGS=settings,)
 
     supervisor_start(name=app_name,
                      command=command,
                      directory=directory)
-    nginx_reload()
-    return True
+    
+    # NGINX Config file
+    nginx_conf = NGINX_CONF_FILE_PATTERN % server_name
+    with open(nginx_conf, "wb") as f:
+        static_dir = directory + "/" + static_dir
+        ssl_config = create_nginx_ssl_config(ssl=ssl,
+                                             directory=directory,
+                                             server_name=server_name)
+        conf = APP_NGINX_TPL.format(PORT=port,
+                                    PROXY_PORT=proxy_port,
+                                    SERVER_NAME=server_name,
+                                    STATIC_DIR=static_dir,
+                                    SSL_CONFIG=ssl_config)        
+        f.write(conf)    
+    reload_server()
 
-def deploy_config(directory):
-    """
-    Return the yaml file
-    :params directory:
-    """
-    yaml_file = directory + "/deploy.yaml"
-    if not os.path.isfile(yaml_file):
-        raise Exception("Deploy file '%s' is required" % yaml_file)
-    with open(yaml_file) as jfile:
-        conf_data = yaml.load(jfile)
-    return conf_data
-
-def deploy_sites(directory):
-    """
-    To deploy sites
-    :params directory:
-    """
-    conf_data = deploy_config(directory)
-    if "sites" in conf_data:
-        for site in conf_data["sites"]:
-            if "app_type" in site:
-                if "server_name" not in site:
-                    raise TypeError("'server_name' is missing in deploy.yaml")
-
-                app_type = site["app_type"].upper()
-                server_name = site["server_name"]
-                remove = True if "remove" in site and site["remove"] is True else False
-                ssl = site["ssl"] if "ssl" in site else None
-
-                if "PHP" == app_type:
-                    deploy_phphtml_site(server_name=server_name,
-                                        directory=directory,
-                                        remove=remove,
-                                        ssl=ssl)
-                elif "PYTHON" == app_type:
-                    if "application" not in site:
-                        raise TypeError("'application' is missing")
-
-                    gunicorn_conf = site["gunicorn"] if "gunicorn" in site else {}
-                    static_dir = site["static_dir"] if "static_dir" in site else "static"
-                    gunicorn(app=site["application"],
-                             server_name=server_name,
-                             directory=directory,
-                             static_dir=static_dir,
-                             **gunicorn_conf)
-            else:
-                raise TypeError("'app_type' is missing in site")
-    else:
-        raise TypeError("'sites' is missing in deploy.yaml")
-
-def deploy_phphtml_site(server_name, directory=None, remove=False, ssl=None):
+def phphtml_site(server_name, directory=None, remove=False, ssl=None):
     """
     To deploy PHP/HTML sites
     :param server_name: the server name
@@ -432,8 +461,8 @@ def deploy_phphtml_site(server_name, directory=None, remove=False, ssl=None):
     :remove:
     :ssl: a dict of {cert:"", key:""}. Path are relative to the working dir
     """
-    nginx_config_file = "/etc/nginx/conf.d/%s.conf" % server_name
-    apache_config_file = "/etc/httpd/conf.d/%s.conf" % server_name
+    nginx_config_file = NGINX_CONF_FILE_PATTERN % server_name
+    apache_config_file = APACHE_CONF_FILE_PATTERN % server_name
 
     if remove:
         if os.path.isfile(nginx_config_file):
@@ -441,8 +470,7 @@ def deploy_phphtml_site(server_name, directory=None, remove=False, ssl=None):
         if os.path.isfile(apache_config_file):
             os.remove(apache_config_file)
     else:
-        _dir = os.path.dirname(directory)
-        logs_dir = "%s/%s.logs" % (_dir, _dir.split("/")[0])
+        logs_dir = "%s.logs" % directory
 
         if not os.path.isdir(logs_dir):
             os.makedirs(logs_dir)
@@ -454,7 +482,9 @@ def deploy_phphtml_site(server_name, directory=None, remove=False, ssl=None):
                             LOGS_DIR=logs_dir))
 
         with open(nginx_config_file, "wb") as f:
-            ssl_config = get_nginx_ssl_config(ssl=ssl, directory=directory)
+            ssl_config = create_nginx_ssl_config(ssl=ssl,
+                                                 directory=directory,
+                                                 server_name=server_name)
             f.write(PHPHTML_NGINX_FRONTEND_TPL
                     .format(DIRECTORY=directory,
                             SERVER_NAME=server_name,
@@ -462,36 +492,103 @@ def deploy_phphtml_site(server_name, directory=None, remove=False, ssl=None):
                             SSL_CONFIG=ssl_config))
     reload_server()
 
-def run_scripts(directory):
+# Deployment
+def get_deploy_config(directory):
     """
-    To run a scripts
+    Return dict of the yaml file
     :params directory:
     """
-    conf_data = deploy_config(directory)
-    if "scripts" in conf_data:
-        for script in conf_data["scripts"]:
-            run(script)
+    global DEPLOY_CONFIG
 
-def deploy_runners(directory):
+    if not DEPLOY_CONFIG:
+        yaml_file = directory + "/deploy.yaml"
+        if not os.path.isfile(yaml_file):
+            raise Exception("Deploy file '%s' is required" % yaml_file)
+        with open(yaml_file) as jfile:
+            DEPLOY_CONFIG = yaml.load(jfile)
+    return DEPLOY_CONFIG
+
+def deploy_sites(directory):
     """
-    Runners are supervisor scripts
+    To deploy sites
     :params directory:
     """
-    conf_data = deploy_config(directory)
-    if "runners" in conf_data:
-        for runner in conf_data["runners"]:
-            if "name" in runner and "command" in runner and "directory" in runner:
-                if "remove" in runner and runner["remove"]:
-                    supervisor_stop(name=runner["name"], remove=True)
-                else:
-                    supervisor_start(name=runner["name"],
-                                     command=runner["command"],
-                                     directory=runner["directory"],
-                                     user="root" if "user" not in runner else runner["user"],
-                                     environment="" if "environment" not in runner else runner["environment"])
+    conf_data = get_deploy_config(directory)
+    virtualenv = conf_data["virtualenv"] if "virtualenv" in conf_data else None
+    if "sites" in conf_data:
+        for site in conf_data["sites"]:
+            if "name" not in site:
+                raise TypeError("'name' is missing in sites config")
+
+            # Common config
+            ssl = None
+            if "ssl" in site:
+                ssl = site["ssl"]
+            server_name = site["name"]
+            remove = True if "remove" in site and site["remove"] is True else False
+            # PYTHON app
+            if "application" in site:
+                if not virtualenv:
+                    raise TypeError("'virtualenv' in required to deploy Python application")
+
+                application = site["application"]
+                static_dir = site["static_dir"] if "static_dir" in site else "static"
+                gunicorn_option = site["gunicorn"] if "gunicorn" in site else {}
+                gunicorn(app=application,
+                         server_name=server_name,
+                         directory=directory,
+                         static_dir=static_dir,
+                         remove=remove,
+                         ssl=ssl,
+                         virtualenv=virtualenv,
+                         **gunicorn_option)
+            # PHP/HTML app
             else:
-                raise TypeError("RUNNER is missing: 'name' or 'command' or 'directory' in deploy.yaml")
+                phphtml_site(server_name=server_name,
+                             directory=directory,
+                             remove=remove,
+                             ssl=ssl)
+    else:
+        raise TypeError("'sites' is missing in deploy.yaml")
 
+def run_scripts(directory, script_type="pre"):
+    """
+    To run a scripts in a virtual env settings
+    :params directory:
+    """
+    conf_data = get_deploy_config(directory)
+    virtualenv = conf_data["virtualenv"] if "virtualenv" in conf_data else None
+    script_key = "%s_scripts" % script_type
+    if script_key in conf_data:
+        for script in conf_data[script_key]:
+            if "command" not in script:
+                raise TypeError("'command' is missing in scripts")
+            
+            _dir = directory if "directory" not in script else script["directory"]
+            command = script["command"]
+
+            # You can use $ENV_PY and $ENV_BIN_DIR to refer to the virtualenv python
+            # and the bin directory respectively
+            command = command.replace("$ENV_PY", get_venv_bin(bin_program="python", virtualenv=virtualenv))
+            command = command.replace("$ENV_BIN_DIR", get_venv_bin(virtualenv=virtualenv))
+
+            # Worker script, run by supervisor
+            if "worker" in script:
+                if "name" not in script["worker"]:
+                    raise TypeError("'name' is missing in worker script")
+                name = script["worker"]["name"]
+                user = "root" if "user" not in script["worker"] else script["worker"]["user"]
+                if "remove" in script and script["remove"] is True:
+                    supervisor_stop(name=name, remove=True)
+                else:
+                    supervisor_start(name=name,
+                                     command=command,
+                                     directory=_dir,
+                                     user=user)            
+            else:
+                runvenv("cd %s; %s" % (_dir, command), virtualenv=virtualenv)
+
+# Git
 def get_git_repo(directory, repo):
     working_dir = "%s/%s" % (directory, repo)
     bare_repo = "%s.git" % working_dir
@@ -523,35 +620,29 @@ def git_init_bare_repo(directory, repo):
         return True
     return False
 
-def update_git_post_receive_hook(directory, repo, self_deploy):
+def update_git_post_receive_hook(directory, repo, self_deploy=False):
     """
     Update the post receive hook
     :params directory: the directory
     :params repo: The name of the repo
-    :params self_deploy: if true, it will self deploy by running deployapp -a
+    :params self_deploy: if true, it will self deploy by running deploysite -a
     :return string: the bare repo path
     """
-
     working_dir, bare_repo = get_git_repo(directory, repo)
     post_receice_hook_file = "%s/hooks/post-receive" % bare_repo
     post_receive_command = ""
 
     if self_deploy:
-        post_receive_command = "deploysite -a"
+        post_receive_command = "deploysite -d"
+    post_receive_hook_data = GIT_POST_RECEIVE_HOOK_TPL.format(
+                        WORKING_DIR=working_dir,
+                        POST_RECEIVE_COMMAND=post_receive_command)
 
-    post_receive_hook_data ="""
-#!/bin/sh
-while read oldrev newrev refname
-do
-    branch=$(git rev-parse --symbolic --abbrev-ref $refname)
-    if [ "master" == "$branch" ]; then
-        GIT_WORK_TREE={WORKING_DIR} git checkout -f
-        cd {WORKING_DIR}
-        {POST_RECEIVE_COMMAND}
-    fi
-done
-""".format(WORKING_DIR=working_dir,
-           POST_RECEIVE_COMMAND=post_receive_command)
+    # Always make a backup of the post receive hook
+    if os.path.isfile(post_receice_hook_file):
+        ts = datetime.datetime.now().strftime("%s")
+        backup_file = (post_receice_hook_file + "-bk-%s") % ts
+        shutil.copyfile(post_receice_hook_file, backup_file)
 
     with open(post_receice_hook_file, "wb") as f:
         f.write(post_receive_hook_data)
@@ -564,11 +655,12 @@ def reload_server():
 
 def cmd():
     try:
+        global VIRTUALENV_DIRECTORY
+        global VERBOSE
+
         parser = argparse.ArgumentParser(description="%s %s" % (__NAME__, __version__))
-        parser.add_argument("-a", "--all", help="Deploy all sites and run all scripts", action="store_true")
-        parser.add_argument("--sites", help="To deploy the sites", action="store_true")
-        parser.add_argument("--scripts", help="To execute scripts in the scripts list", action="store_true")
-        parser.add_argument("--runners", help="Runners are scripts to run with Supervisor ", action="store_true")
+        parser.add_argument("-d", "--deploy-all", help="Deploy all sites and run all scripts", action="store_true")
+        parser.add_argument("--scripts", help="Execute Pre/Post scripts", action="store_true")
         parser.add_argument("--reload-server", help="To reload the servers", action="store_true")
         parser.add_argument("-r", "--repo", help="The repo name [-r www --git-init --self-deploy]")
         parser.add_argument("--git-init", help="To setup git bare repo name in "
@@ -576,81 +668,88 @@ def cmd():
                                                  "to [ie: -r www --git-init]", action="store_true")
         parser.add_argument("--git-push-deploy", help="On git push, to deploy instantly. set to 0 or N to disallow "
                                                       "[-r www --git-push-deploy Y|N]")
-
+        parser.add_argument("--non-verbose", help="Verbose", action="store_true")
 
         arg = parser.parse_args()
+        VERBOSE = False if arg.non_verbose else True
 
-        if arg.all:
-            arg.scripts = True
-            arg.sites = True
-            arg.runners = True
-
-        # Order of execution is important:
-        #   - install_requirements
-        #   - scripts
-        #   - sites
-        #   - runners
-        # -------------------
-
-        print("*" * 80)
-        print("%s %s" % (__NAME__, __version__))
-        print("")
+        v_print("*" * 80)
+        v_print("%s %s" % (__NAME__, __version__))
+        v_print("")
 
         # The repo name to perform git stuff on
         repo = arg.repo or None
 
-        # Automatically install requirement
-        if arg.sites or arg.scripts or arg.runners:
-            print("> INSTALL REQUIREMENTS ...")
-            install_requirements(CWD)
+        # Automatically setup environment and install requirement
+        if arg.deploy_all or arg.scripts:
+            virtualenv = None
+            _config = get_deploy_config(CWD)
+            if "virtualenv" in _config:
+                if "virtualenv_directory" in _config:
+                    VIRTUALENV_DIRECTORY = _config["virtualenv_directory"]
 
-        # Run scripts
-        if arg.scripts:
-            print("> Running SCRIPTS ...")
-            run_scripts(CWD)
-            print("Done!\n")
+                virtualenv = _config["virtualenv"]
+                rebuild_virtualenv = True if "virtualenv_rebuild" in _config \
+                                             and _config["virtualenv_rebuild"] is True else False
+                v_print("> SETUP VIRTUALENV: %s " % virtualenv)
+                virtualenv_setup(virtualenv, rebuild_virtualenv)
 
-        # Deploy app
-        if arg.sites:
-            print("> Deploying SITES ... ")
+            v_print("> Install requirements")
+            install_requirements(CWD, virtualenv)
+            v_print("Done!\n")
+
+        if arg.deploy_all:
             try:
+                v_print(":: DEPLOY SITES ::")
+                v_print("")
+                v_print("> Running PRE-SCRIPTS ...")
+                run_scripts(CWD, "pre")
+                v_print("")
+                v_print("> Deploying SITES ... ")
                 deploy_sites(CWD)
+                v_print("")
+                v_print("> Running POST-SCRIPTS ...")
+                run_scripts(CWD, "post")
+                v_print("")
             except Exception as ex:
-                print("Error: %s" % ex.message)
-            print("Done!\n")
+                v_print("Error: %s" % ex.__repr__())
+            v_print("Done!\n")
 
-        # Run runners
-        if arg.runners:
-            print("> Deploying RUNNERS ...")
-            deploy_runners(CWD)
-            print("Done!\n")
+        elif arg.scripts:
+            try:
+                v_print("> Running PRE-SCRIPTS ...")
+                run_scripts(CWD, "pre")
+                v_print("> Running POST-SCRIPTS ...")
+                run_scripts(CWD, "post")
+            except Exception as ex:
+                v_print("Error: %s" % ex.__repr__())
+            v_print("Done!\n")
 
         # Reload server
         if arg.reload_server:
-            print ("> Reloading server ...")
+            v_print("> Reloading server ...")
             reload_server()
-            print("Done!\n")
+            v_print("Done!\n")
 
         # Setup new repo
         if arg.git_init:
-            print("> Create Git Bare repo ...")
+            v_print("> Create Git Bare repo ...")
             if not repo:
                 raise TypeError("Missing 'repo' name")
             bare_repo = "%s/%s.git" % (CWD, repo)
-            print("Repo: %s" % bare_repo)
+            v_print("Repo: %s" % bare_repo)
             if git_init_bare_repo(CWD, repo):
                 update_git_post_receive_hook(CWD, repo, False)
-            print("Done!\n")
+            v_print("Done!\n")
 
         # Git push deploy
         if arg.git_push_deploy:
-            print("> Git Push Deploy ...")
+            v_print("> Git Push Deploy ...")
             if not repo:
                 raise TypeError("Missing 'repo' name")
             deploy = True if arg.git_push_deploy in [True, 1, "1", "y", "Y"] else False
             update_git_post_receive_hook(CWD, repo, deploy)
-            print("Done!\n")
-
+            v_print("Done!\n")
 
     except Exception as ex:
-        print("ERROR: %s " % ex.__str__())
+        v_print("ERROR: %s " % ex.__repr__())

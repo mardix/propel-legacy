@@ -3,69 +3,68 @@
 # For all sites, server_name is required, app_type is required
 
 ---
+# Virtualenv. (string) the name of the enviroment to use. It will create one automatically
+  virtualenv: ""
+  virtualenv_directory: ""
+  virtualenv_rebuild: ""
+
 # Sites: list of dict of web sites application
   sites:
-
-# Python app must have, must set app_type: PYTHON
     -
-      app_type: "PYTHON"
-      server_name: "myserver.com"
-      application: "run_myserver:flask_app"
-      static_dir: "myserver/static"
+      # The site name
+      name: "mysite.com"
+      application: "run_mysite:flask_app"
+      static_dir: "my_site/static"
 
-# Python app with Gunicorn settings
-    -
-      app_type: "PYTHON"
-      server_name: "otherserver.com"
-      application: "run_otherserver:flask_app"
-      static_dir: "otherserver/static"
+      # Gunicorn option (Option Python)
       gunicorn:
-          workers: 4
-          preload: ""
-          port: 80
+        workers: 4
+        threads: 8
 
-# To remove existing app. Set 'remove: True'
-    -
-      app_type: "PYTHON"
-      server_name: "toremove.server.com"
-      application: "run_worker_server:flask_app"
-      static_dir: "worker_server/static"
+      # With SSL Option (optional)
+      ssl:
+        cert: ""
+        key: ""
+
+      # To remove the site
       remove: True
 
-# Add SSL, by settings ssl: {cert: "", key: ""}
     -
-      app_type: "PYTHON"
-      server_name: "myserver.com"
-      application: "run_myserver:flask_app"
-      static_dir: "myserver/static"
+      name: "sub.mysite.com"
+      application: "run_submysite:flask_app"
+      static_dir: "my_subsite/static"
       ssl:
-        cert: "ssl/site.crt"
+        cert: "ssl/site.cert"
         key: "ssl/site.key"
+      remove: False
 
-# PHP or HTML site, set app_type: PHP
     -
-      app_type: "PHP"
-      server_name: "myphpserver.com"
+      name: "myphphtmlsite.com"
 
-#
-# Scripts: list of scripts to execute
-  scripts:
-    - "hostname"
-    - "ls -l"
-
-#
-# Runners: List of dict of supervisor scripts to run
-  runners:
+# Scripts: list of scripts to execute or run as supervised before deploy
+  pre_scripts:
     -
-      name: ""
+      # To run a script from the current directory
       command: ""
-      directory: ""
-      user: ""
-      environment: ""
-      remove: False  # Bool
     -
-      name: ""
-      command: ""
       directory: ""
-      user: ""
-      environment: ""
+      command: "myscript.py"
+      worker:
+        name: ""
+        user: ""
+      supervise: True  # Run this script with supervisord
+      name: "" # The of the supervised script
+      user: "" # The user
+
+# Scripts: list of scripts to execute or run as supervised after deploy
+  post_scripts:
+    -
+      # To run a script from the current directory
+      command: ""
+      remove: True
+    -
+      directory: ""
+      command: "myscript.py"
+      worker:
+        name: ""
+        user: ""

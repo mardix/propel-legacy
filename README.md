@@ -1,5 +1,20 @@
 # DeploySite
 
+A simple module that allows you to deploy Python site (Flask, Django), PHP and
+normal HTML site. It also allows you to run script before and after the
+deployment of the sites
+
+For PHP/HTML site, DeploySite just create the Nginx and Apache config file
+and reload the servers.
+
+But the beauty is in Python application.
+
+DeploySite use virtualenv (virtualenvwrapper) to isolate each site deployment.
+
+Allowing to operate with its own modules.
+
+
+
 A simple module to deploy flask application using Gunicorn, Supervisor and NGinx as a proxy
 
 By default, application will be deployed on port 80 with Nginx.
@@ -26,7 +41,6 @@ Add the following config in there:
     ---
       sites:
         -
-          app_type: "PYTHON"
           server_name: "myserver.com"
           application: "run_myserver:flask_app"
           static_dir: "myserver/static"
