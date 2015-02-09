@@ -19,7 +19,7 @@ setup(
     download_url='http://github.com/mardix/deployapp/tarball/master',
     py_modules=['deployapp'],
     entry_points=dict(console_scripts=['deployapp=deployapp:cmd',
-                                       'deployapp-setup-supervisor=deployapp:setup_supervisor']),
+                                       'deployapp-setup=deployapp:setup_deployapp']),
     install_requires=[
         'jinja2',
         'pyyaml',

@@ -44,7 +44,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip --install jinja2")
 
-__version__ = "0.8.0"
+__version__ = "0.8.1"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Deployapp"
@@ -177,15 +177,26 @@ server {
     {{ SERVER_DIRECTIVES }}
 }
 
-{% if WWW_TO_NON_WWW %}
+{% if FORCE_NON_WWW or FORCE_WWW %}
 
 server {
     listen {{ PORT }};
+
     {% if SSL_CERT and SSL_KEY %}
     listen 443 ssl;
     {% endif %}
-    server_name www.{{ SERVER_NAME }};
-    return 301 $scheme://{{ SERVER_NAME }}$request_uri;
+
+    {% if FORCE_NON_WWW %}
+
+        server_name www.{{ SERVER_NAME }};
+        return 301 $scheme://{{ SERVER_NAME }}$request_uri;
+
+    {% elif FORCE_WWW and not SERVER_NAME.startswith('www.') %}
+
+        server_name {{ SERVER_NAME }};
+        return 301 $scheme://www.{{ SERVER_NAME }}$request_uri;
+
+    {% endif %}
 }
 
 {% endif %}
@@ -451,7 +462,7 @@ class App(object):
                 if "name" not in site:
                     raise TypeError("'name' is missing in sites config")
                 if "application" in site and not self.virtualenv.get("name"):
-                    raise TypeError("'virtualenv' in required to deploy Python application")
+                    raise TypeError("'virtualenv' in required for web Python app")
 
                 name = site["name"]
                 server_name = site["name"]
@@ -514,7 +525,8 @@ class App(object):
 
                                    ROOT_DIR=nginx.get("root_dir", ""),
                                    ALIASES=nginx.get("aliases", {}),
-                                   WWW_TO_NON_WWW=nginx.get("www_to_non_www", False),
+                                   FORCE_NON_WWW=nginx.get("force_non_www", False),
+                                   FORCE_WWW=nginx.get("force_www", False),
                                    SERVER_DIRECTIVES=nginx.get("server_directives", ""),
                                    SSL_CERT=nginx.get("ssl_cert", ""),
                                    SSL_KEY=nginx.get("ssl_key", ""),
@@ -553,6 +565,7 @@ class App(object):
 
                 name = worker["name"]
                 user = worker["user"] if "user" in worker else "root"
+                environment = worker["environment"] if "environment" in worker else ""
                 directory = worker["directory"] if "directory" in worker else self.directory
                 command = _parse_command(command=worker["command"], virtualenv=self.virtualenv.get("name"))
                 remove = True if "remove" in worker and worker["remove"] is True else False
@@ -569,7 +582,8 @@ class App(object):
                 Supervisor.start(name=name,
                                  command=command,
                                  directory=directory,
-                                 user=user)
+                                 user=user,
+                                 environment=environment)
 
     def install_requirements(self):
         requirements_file = self.directory + "/requirements.txt"
@@ -616,10 +630,12 @@ def cmd():
             if app.virtualenv.get("name"):
                 _print("> SETUP VIRTUALENV: %s " % app.virtualenv.get("name"))
                 app.setup_virtualenv()
+
                 if app.virtualenv.get("directory"):
                     VIRTUALENV_DIRECTORY = app.virtualenv.get("directory")
-            _print("> Install requirements")
-            app.install_requirements()
+
+                _print("> INSTALL REQUIREMENTS")
+                app.install_requirements()
 
             if arg.websites:
                 _print(":: DEPLOY WEBSITES ::")
@@ -670,11 +686,11 @@ def cmd():
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 
-def setup_supervisor():
+def setup_deployapp():
     """
-    To setup supervisor path compatible to deployapp
+    To setup necessary paths and commands
     """
-    print("DEPLOYAPP: SETUP SUPERVISOR...")
+    print("SETUP DEPLOYAPP ...")
 
     conf_file = "/etc/supervisord.conf"
     init_d = "/etc/init.d/supervisord"

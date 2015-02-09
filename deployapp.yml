@@ -4,7 +4,7 @@
 # deployapp (--websites | --scripts | --workers)
 
 ---
-# Virtualenv. Highly recommended to set virtualenv
+# Virtualenv
 virtualenv:
   name: ""
   directory: ""
@@ -24,7 +24,8 @@ web:
       root_dir: ""
       aliases:
         "/static": "mysite/static"
-      www_to_non_www: True
+      force_non_www: True
+      force_www: False
       server_directives: ""
       ssl_directives: ""
       ssl_cert: ""
