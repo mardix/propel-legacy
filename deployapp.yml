@@ -1,0 +1,91 @@
+
+# Deployapp
+# Config file
+# deployapp (--websites | --scripts | --workers)
+
+---
+# Virtualenv. Highly recommended to set virtualenv
+virtualenv:
+  name: ""
+  directory: ""
+  rebuild: ""
+
+# Sites: list of dict of web sites application
+web:
+  -
+    # The site name
+    name: "mysite.com" # The site name
+    application: "run_mysite:flask_app" # for python application
+
+    # Nginx related config
+    nginx:
+      port: 80
+      logs_dir: ""
+      root_dir: ""
+      aliases:
+        "/static": "mysite/static"
+      www_to_non_www: True
+      server_directives: ""
+      ssl_directives: ""
+      ssl_cert: ""
+      ssl_key: ""
+
+    # Gunicorn option (Optional. Python only)
+    gunicorn:
+      workers: 4
+      threads: 8
+
+
+    exclude: True  # Prevent site from being redeployed
+
+    # To remove the site configuration
+    remove: True
+
+  -
+    name: "sub.mysite.com"
+    application: "run_submysite:flask_app"
+    nginx:
+      aliases:
+        "/static": "my_static_dir"
+      ssl_cert: "ssl/site.cert"
+      ssl_key: "ssl/site.key"
+    remove: False
+  -
+    name: "myphphtmlsite.com"
+    nginx:
+      root_dir: "html"
+
+# SCRIPTS-PRE-WEB: To run script before web deploy
+scripts_pre_web:
+  -
+    command: ""
+  -
+    command: "myscript.py"
+    directory: ""
+
+# SCRIPTS-POST-WEB: To run after web deploy
+scripts_post_web:
+  -
+    command: ""
+  -
+    directory: ""
+    command: "$VENV_PY myscript.py"
+
+# SCRIPTS TO RUN
+scripts:
+  - command: ""
+  - command: "$VENV_PY myscript.py"
+    directory: ""
+    exclude: True # Prevent this script from resetting
+
+# WORKERS
+workers:
+  - name: ""
+    directory: ""
+    command: ""
+    user: ""
+  -
+    name: ""
+    directory: ""
+    command:
+    exclude: True  # Prevent this worker from rerunning

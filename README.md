@@ -1,341 +1,106 @@
-# DeploySite
+# Deployapp
 
-A simple module that allows you to deploy Python site (Flask, Django), PHP and
-normal HTML site. It also allows you to run script before and after the
-deployment of the sites
+**deployapp** is a package to deploy multiple Python sites/application in virtualenv.  It also allows you to deploy PHP/HTML applications, run scripts and run workers with Supervisor.
 
-For PHP/HTML site, DeploySite just create the Nginx and Apache config file
-and reload the servers.
+The reason for such package, is because I wanted to deploy multiple isolated Flask sites on DigitalOcean, and because Elastic Beanstalk (AWS) was too damn expensive. 
 
-But the beauty is in Python application.
+For Python application it uses Virtualenv to isolate each application, Gunicorn+Gevent as the backend server,
+Supervisor and Nginx.
 
-DeploySite use virtualenv (virtualenvwrapper) to isolate each site deployment.
-
-Allowing to operate with its own modules.
+For PHP/HTML sites, it just uses the path as it would in normal environment, and you must have php-fpm for Nginx configured already.
 
 
+Requirements:
 
-A simple module to deploy flask application using Gunicorn, Supervisor and NGinx as a proxy
+    - Nginx
 
-By default, application will be deployed on port 80 with Nginx.
+    - Gunicorn
 
-**DeploySite** assign a random proxy for Gunicorn to work
+    - Supervisor
 
-Each application must have its own server name.
+    - Gevent
 
-It also run scripts on the server and supervisor runners
+    - Virtualenvwrapper
+
+    - php-fpm (optional if running PHP/HTML site)
+    
+
+** TESTED ON CENTOS AND WITH PYTHON 2.7
+
+---
 
 ### Install
 
-	pip install deploysite
+	pip install deployapp
 
 
-### How to use:
+After installing *deployapp* for the first time, run the following to setup
+Supervisor conf and logs path compatible to deployapp.
 
-##Deploy WebApps
+    deployapp-setup-supervisor
 
-Create a file in your application root directory called: `deploy.yaml`
-
-Add the following config in there:
-
-    ---
-      sites:
-        -
-          server_name: "myserver.com"
-          application: "run_myserver:flask_app"
-          static_dir: "myserver/static"
-
-
-Substitute `myserver.com` with your `site name`
-
-Substitute `run_myserver:flask_app` with your flask app name
-
-Substitute `myserver/static` with your application's static file
-
-Then on the command line:
-
-	deploysite --sites
-
-
-#### Deploy multiple applications:
-
-    ---
-      sites:
-        -
-          app_type: "PYTHON"
-          server_name: "myserver.com"
-          application: "run_myserver:flask_app"
-          static_dir: "myserver/static"
-        -
-          app_type: "PYTHON"
-          server_name: "otherserver.com"
-          application: "run_otherserver:flask_app"
-          static_dir: "otherserver/static"
-          gunicorn:
-              workers: 4
-              preload: ""
-              port: 80
-        -
-          server_name: "worker.server.com"
-          application: "run_worker_server:flask_app"
-          static_dir: "worker_server/static"
-
-
-This config above will deploy 3 apps.
-
-For custom gunicorn configuration, set the gunicorn (dict) settings
+*You may need root admin.
 
 ---
 
-##Run Scripts 
+### Quick Examples
 
-Add the following in your deploy.yaml to run scripts before the deployment of the app.
-
-`scripts` is a **LIST** containing the full path of execution of your scripts
-
-    scripts:
-      - "hostname"
-      - "ls -l"
-
-So it could look something like this:
-
-    ---
-    scripts:
-      - "hostname"
-      - "ls -l"
-      
-To execute script alone:
-	
-	deploysite --scripts
+**deployapp** works in the current working directory (CWD). You must have the file
+`deployapp.yml` in order for it to execute properly.
 
 
-## Runners
+#### deployapp -w | --websites
 
-Runners are application to be run by supervisor
+To deploy websites. It will also run scripts_pre_web and scripts_post_web
 
-To execute script alone:
-
-	deploysite --runners
-
-
-## Deploy All
-
-You can deploy and run everything at once:
-
-	deploysite -a 
-	
-	or 
-	
-	deploysite --all
-	
-### Order of execution:
-
-Upon launching `deploysite --all` , it will execute in the following order: 
-
-0) Requirements
-
-1) scripts
-
-2) sites
-
-3) Runners
-
----
-
-## Other fun stuff
-
-####Setup A Bare Git Repo
-
-Setup a git repo, which will include a bare repo to push content to, and the actual content directory
-
-    cd /home/mysite
-    deploysite -r www --git-init
+    cd $APPLICATION_ROOT_DIR
+    deployapp -w
 
 
-Will create the following:
+#### deployapp --scripts
 
-    |
-    |_ /home
-        |
-        |_ /mysite
-            |
-            |_ /www
-            |
-            |_ /www.git
+To run scripts
 
+    cd $APPLICATION_ROOT_DIR
+    deployapp --scripts
 
-`www.git` is a bare repo
+#### deployapp --workers
 
-`www` is where git will push the bare content to
+To run workers in the background using supervisor
 
-#### To deploy on push
-
-You set it to deploy on master push
-
-    cd /home/mysite
-    deploysite -r www --git-push-deploy 1
+    cd $APPLICATION_ROOT_DIR
+    deployapp --scripts
 
 
-To not deploy on push
+### deployapp --git-init $repo_name
 
-    cd /home/mysite
-    deploysite -r www --git-push-deploy no
+To create a bare repo git directory to push content to with `git push`
 
----
+    cd /home/$mydomain.com
+    deployapp --git-init www
 
-#### Reload Server
+It will create 3 directories:
 
-To reload the server
+`www` : Where your site content will reside
 
-	deploysite --reload-server
+`www.git` : A git bare repo
 
-
-
-####requirements.txt
-
-If a requirements.txt exist, it will run it before deploying
-
+`www.logs`: A directory
 
 
 ---
 
-### deploy.yaml:
+## Learn More
+
+### deploy.yml
+
+**deployapp.yml** is a config file that contains the websites, scripts and workers
+to deploy.
 
 
-Inside of the directory that contains the python web app, create a file `deploy.yaml`
-
-**deploy.yaml** contains the params to properly deploy your app, run scripts etc
-
-    ---
-    # Sites: list of dict of web sites application
-      sites:
-
-    # Python app must have, must set app_type: PYTHON
-        -
-          app_type: "PYTHON"
-          server_name: "myserver.com"
-          application: "run_myserver:flask_app"
-          static_dir: "myserver/static"
-
-    # Python app with Gunicorn settings
-        -
-          app_type: "PYTHON"
-          server_name: "otherserver.com"
-          application: "run_otherserver:flask_app"
-          static_dir: "otherserver/static"
-          gunicorn:
-              workers: 4
-              preload: ""
-              port: 80
-
-    # To remove existing app. Set 'remove: True'
-        -
-          app_type: "PYTHON"
-          server_name: "toremove.server.com"
-          application: "run_worker_server:flask_app"
-          static_dir: "worker_server/static"
-          remove: True
-
-    # Add SSL, by settings ssl: {cert: "", key: ""}
-        -
-          app_type: "PYTHON"
-          server_name: "myserver.com"
-          application: "run_myserver:flask_app"
-          static_dir: "myserver/static"
-          ssl:
-            cert: "ssl/site.crt"
-            key: "ssl/site.key"
-
-    # PHP or HTML site, set app_type: PHP
-        -
-          app_type: "PHP"
-          server_name: "myphpserver.com"
-
-    #
-    # Scripts: list of scripts to execute
-      scripts:
-        - "hostname"
-        - "ls -l"
-
-    #
-    # Runners: List of dict of supervisor scripts to run
-      runners:
-        -
-          name: ""
-          command: ""
-          directory: ""
-          user: ""
-          environment: ""
-          remove: False  # Bool
-        -
-          name: ""
-          command: ""
-          directory: ""
-          user: ""
-          environment: ""
+[in construction]
 
 
-#### Description
 
-
-	sites: # A list of dict with the following params
-	   - app_type: PHP|PYTHON - The application type
-       - application string: $module_name:$variable_name. The application to load (PYTHON)
-       - server_name string: The name of the server ie: mysite.com (REQUIRED ON ALL)
-       - static_dir string: The static directory relative to (PYTHON)
-       - gunicorn: dict of gunicorn config (http://docs.gunicorn.org/en/develop/configure.html) (OPTIONAL PYTHON)
-            workers: 4  (If not provided, it will assign the workers)
-            preload: ""
-            port: 80 (If not provided, it will assign it to port 80)
-            max-requests: 500
-
-	scripts: # A list of scripts path to execute
-
-	runners: # A list of dict to run supervisor scripts
-	    - name : the name of the app
-	    - command: The command
-	    - directory : directory
-	    - user: user
-	    - environment:
-	    - remove: bool. If true and the runner is active, it will remove it
-
-
-### Note: The Gunicorn config is set with the following by default
-
-    ---
-      sites:
-        -
-          ...
-          gunicorn:
-              workers: 4
-              preload: " "
-              port: 80
-              max-requests: 500
-              worker-class: gevent
-
-
-- To change a default Gunicorn config set the default one to the desired value
-
-- To remove a default Gunicorn config set the default one to False
-
-
----
-
-### Requirements
-
-- Yaml
-
-- NGinx
-
-- Apache
-
-- Supervisor
- 
-- Gunicorn
-
-- Gevent
-
----
-
-License: MIT - Copyright 2014/2015 Mardix
+License: MIT - Copyright 2015 Mardix
 

@@ -1,11 +1,11 @@
 """
-deploysite
+deployapp
 """
 
 from setuptools import setup
-import deploysite
+import deployapp
 
-PACKAGE = deploysite
+PACKAGE = deployapp
 
 setup(
     name=PACKAGE.__NAME__,
@@ -13,20 +13,20 @@ setup(
     license=PACKAGE.__license__,
     author=PACKAGE.__author__,
     author_email='mardix@github.com',
-    description=PACKAGE.__doc__,
+    description="A package to deploy sites in virtualenv, run scripts, and deploy workers with supervisor",
     long_description=PACKAGE.__doc__,
-    url='http://github.com/mardix/deploysite/',
-    download_url='http://github.com/mardix/deploysite/tarball/master',
-    py_modules=['deploysite'],
-    entry_points=dict(console_scripts=['deploysite=deploysite:cmd']),
+    url='http://github.com/mardix/deployapp/',
+    download_url='http://github.com/mardix/deployapp/tarball/master',
+    py_modules=['deployapp'],
+    entry_points=dict(console_scripts=['deployapp=deployapp:cmd',
+                                       'deployapp-setup-supervisor=deployapp:setup_supervisor']),
     install_requires=[
+        'jinja2',
         'pyyaml',
-        'gunicorn',
         'supervisor',
-        'gevent',
         'virtualenvwrapper'
     ],
-    keywords=['deploy', 'flask'],
+    keywords=['deploy', 'flask', 'gunicorn', 'django', 'workers', 'deploy sites'],
     platforms='any',
     classifiers=[
         'Environment :: Web Environment',
@@ -37,6 +37,9 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.4',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
         'Topic :: Software Development :: Libraries :: Python Modules'
     ],
