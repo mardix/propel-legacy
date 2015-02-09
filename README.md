@@ -38,7 +38,7 @@ Requirements:
 After installing *deployapp* for the first time, run the following to setup
 Supervisor conf and logs directories compatible to deployapp.
 
-    deployapp-setup-supervisor
+    deployapp-setup
 
 *You may need root admin.
 
