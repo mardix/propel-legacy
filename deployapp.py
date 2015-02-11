@@ -44,7 +44,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip --install jinja2")
 
-__version__ = "0.8.1"
+__version__ = "0.8.2"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Deployapp"
@@ -489,11 +489,7 @@ class App(object):
                         Supervisor.stop(name=gunicorn_app_name, remove=True)
                     continue
 
-                logs_dir = "%s.logs" % self.directory
-                if not os.path.isdir(logs_dir):
-                    os.makedirs(logs_dir)
-
-                # PYTHON app.
+                # Python app will use Gunicorn+Gevent and Supervisor
                 if application:
                     proxy_port = generate_random_port()
                     default_gunicorn = {
@@ -516,6 +512,12 @@ class App(object):
                                      command=command,
                                      directory=directory)
 
+                logs_dir = nginx.get("logs_dir", None)
+                if not logs_dir:
+                    logs_dir = "%s.logs" % self.directory
+                    if not os.path.isdir(logs_dir):
+                        os.makedirs(logs_dir)
+
                 with open(nginx_config_file, "wb") as f:
                     context = dict(NAME=name,
                                    SERVER_NAME=server_name,
@@ -531,7 +533,7 @@ class App(object):
                                    SSL_CERT=nginx.get("ssl_cert", ""),
                                    SSL_KEY=nginx.get("ssl_key", ""),
                                    SSL_DIRECTIVES=nginx.get("ssl_directives", ""),
-                                   LOGS_DIR=nginx.get("logs_dir", logs_dir)
+                                   LOGS_DIR=logs_dir
                                    )
                     content = Template(NGINX_CONFIG).render(**context)
                     f.write(content)

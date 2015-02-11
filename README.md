@@ -25,7 +25,7 @@ Requirements:
     - php-fpm (optional if running PHP/HTML site)
     
 
-** TESTED ON CENTOS AND WITH PYTHON 2.7
+** TESTED ON CENTOS AND WITH PYTHON 2.7.
 
 ---
 
