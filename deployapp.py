@@ -44,7 +44,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip --install jinja2")
 
-__version__ = "0.8.2"
+__version__ = "0.8.3"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Deployapp"
@@ -335,8 +335,8 @@ def get_deploy_config(directory):
     return DEPLOY_CONFIG
 
 def _parse_command(command, virtualenv=None):
-    command = command.replace("$VENV_PY", get_venv_bin(bin_program="python", virtualenv=virtualenv))
-    command = command.replace("$VENV_BIN", get_venv_bin(virtualenv=virtualenv))
+    command = command.replace("$PYTHON", get_venv_bin(bin_program="python", virtualenv=virtualenv))
+    command = command.replace("$LOCAL_BIN", get_venv_bin(virtualenv=virtualenv))
     return command
 
 def reload_server():
