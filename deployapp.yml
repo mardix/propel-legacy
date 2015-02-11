@@ -37,7 +37,8 @@ web:
       threads: 8
 
 
-    exclude: True  # Prevent site from being redeployed
+    # Prevent site from being redeployed
+    exclude: True
 
     # To remove the site configuration
     remove: True
@@ -70,23 +71,25 @@ scripts_post_web:
     command: ""
   -
     directory: ""
-    command: "$VENV_PY myscript.py"
+    command: "$PTHON myscript.py"
 
 # SCRIPTS TO RUN
 scripts:
-  - command: ""
-  - command: "$VENV_PY myscript.py"
+  -
+    command: ""
+  -
+    command: "$PYTHON myscript.py"
     directory: ""
     exclude: True # Prevent this script from resetting
 
 # WORKERS
 workers:
-  - name: ""
-    directory: ""
-    command: ""
-    user: ""
   -
-    name: ""
+    name: "myworker1"
+    command: "$PYTHON myyworker1.py
+  -
+    name: "myworker2"
     directory: ""
-    command:
+    command: "$PYTHON myyworker2.py"
+    user: ""
     exclude: True  # Prevent this worker from rerunning
