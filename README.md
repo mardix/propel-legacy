@@ -67,7 +67,7 @@ Once done, you should be good to go.
 
 So you must `cd` into the directory that contains your `deployapp.yml`
 
-Let's say my application is as: `/home/myapp.com/www`
+Let's say my application is at: `/home/myapp.com/www`
 
 	cd /home/myapp.com/www
 	
@@ -223,6 +223,7 @@ You can add more NGINX and Gunicorn config. Gunicorn config is only for Python a
         
 		# Nginx Config
         nginx:
+          server_name: "site1.com admin.site2.com"
           port: 80
           root_dir: ""
           logs_dir: ""
@@ -265,6 +266,8 @@ You can add more NGINX and Gunicorn config. Gunicorn config is only for Python a
 #### NGINX config
 
 - port: 80 by default
+
+- server_name: (string) Optional if the server name is different than name, or has multiple server_name. Separate multiple server with space 
 
 - root_dir: If provided, it will be used as root dir in nginx, when using PHP/HTML site
 

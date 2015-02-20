@@ -44,7 +44,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip --install jinja2")
 
-__version__ = "0.8.3"
+__version__ = "0.9.0"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Deployapp"
@@ -188,13 +188,13 @@ server {
 
     {% if FORCE_NON_WWW %}
 
-        server_name www.{{ SERVER_NAME }};
-        return 301 $scheme://{{ SERVER_NAME }}$request_uri;
+        server_name www.{{ NAME }};
+        return 301 $scheme://{{ NAME }}$request_uri;
 
-    {% elif FORCE_WWW and not SERVER_NAME.startswith('www.') %}
+    {% elif FORCE_WWW and not NAME.startswith('www.') %}
 
-        server_name {{ SERVER_NAME }};
-        return 301 $scheme://www.{{ SERVER_NAME }}$request_uri;
+        server_name {{ NAME }};
+        return 301 $scheme://www.{{ NAME }}$request_uri;
 
     {% endif %}
 }
@@ -465,14 +465,13 @@ class App(object):
                     raise TypeError("'virtualenv' in required for web Python app")
 
                 name = site["name"]
-                server_name = site["name"]
-                directory = self.directory
                 nginx = site["nginx"] if "nginx" in site else {}
                 gunicorn_option = site["gunicorn"] if "gunicorn" in site else {}
                 application = site["application"] if "application" in site else None
-                gunicorn_app_name = "gunicorn_%s" % (server_name.replace(".", "_"))
+                gunicorn_app_name = "gunicorn_%s" % (name.replace(".", "_"))
                 proxy_port = None
                 remove = True if "remove" in site and site["remove"] is True else False
+                directory = self.directory
 
                 # Exclude from running
                 exclude = True if "exclude" in site and site["exclude"] is True else False
@@ -520,11 +519,10 @@ class App(object):
 
                 with open(nginx_config_file, "wb") as f:
                     context = dict(NAME=name,
-                                   SERVER_NAME=server_name,
+                                   SERVER_NAME=nginx.get("server_name", name),
                                    DIRECTORY=directory,
-                                   PORT=nginx.get("port", NGINX_DEFAULT_PORT),
                                    PROXY_PORT=proxy_port,
-
+                                   PORT=nginx.get("port", NGINX_DEFAULT_PORT),
                                    ROOT_DIR=nginx.get("root_dir", ""),
                                    ALIASES=nginx.get("aliases", {}),
                                    FORCE_NON_WWW=nginx.get("force_non_www", False),

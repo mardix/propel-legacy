@@ -20,6 +20,7 @@ web:
     # Nginx related config
     nginx:
       port: 80
+      server_name: "mysite.com" # Optional if the server name is different than name, or has multiple server_name
       logs_dir: ""
       root_dir: ""
       aliases:
