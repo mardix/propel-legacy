@@ -1,13 +1,17 @@
 # Deployapp
 
-**Deployapp** is a package to deploy multiple Python sites/application in virtualenv.  It also allows you to deploy PHP/HTML applications, run scripts and run workers with Supervisor.
+**Deployapp** is a package to deploy multiple Python sites/application in virtualenv.  
+It also allows you to deploy PHP/HTML applications, run scripts and run workers with Supervisor.
 
-For Python applications it uses Virtualenv to isolate each application, Gunicorn+Gevent as the backend server, Supervisor to monitor it and Nginx as proxy.
+For Python applications it uses Virtualenv to isolate each application, 
+Gunicorn+Gevent as the backend server, Supervisor to monitor it and Nginx as proxy.
 
-For PHP/HTML sites, it just uses the path as it would in normal environment, and you must have php-fpm for Nginx configured already.
+For PHP/HTML sites, it just uses the path as it would in normal environment, 
+and you must have php-fpm for Nginx configured already.
 
 
-West Side Story: I created this package because I wanted to deploy multiple isolated Flask sites on DigitalOcean. And I wanted something that automates the deployment process of my sites, while sipping on some Caramel Iced Coffee :) 
+West Side Story: I created this package because I wanted to deploy multiple isolated Flask sites on a single DigitalOcean instance. 
+And I wanted something that automates the deployment process of my sites, while sipping on some Caramel Iced Coffee :) 
 
 
 Deployapp makes use of the following packages:
@@ -85,12 +89,27 @@ To deploy websites. It will also run scripts_pre_web and scripts_post_web
 To run scripts
 
     deployapp --scripts
+    
+
+### deployapp --scripts --name my_script_name
+
+To run a custom script
+
+    deployapp --scripts --name my_script_name
+    
 
 #### deployapp --workers
 
 To run workers in the background using Supervisor
 
-    deployapp --scripts
+    deployapp --workers
+
+
+### deployapp --undeploy
+
+To undeploy all. It will remove sites, scripts, workers, and destroy the virtualenv
+
+    deployapp --undeploy
 
 ---
 
@@ -349,7 +368,7 @@ The command above will execute the manage.py with the virtualenv python.
 
 #### SCRIPTS_PRE_WEB & SCRIPTS_POST_WEB
 
-`scripts_pre_web` and `scripts_post_web` are ran before and after web deployment respectively, and follow the same rules as SCRIPTS above.
+`scripts_pre_web` and `scripts_post_web` are run before and after web deployment respectively, and follow the same rules as SCRIPTS above.
 
 
     scripts_pre_web:
@@ -360,6 +379,29 @@ The command above will execute the manage.py with the virtualenv python.
       -
         command: "$PTHON another-script.py"
         
+
+#### SCRIPTS_UNDEPLOY
+
+`scripts_undeploy` will run when undeploying the application. It can be used to clean up etc.
+
+
+    scripts_undeploy:
+      -
+        command: "$PYTHON myscript.py"
+        
+        
+#### Custom Scripts: SCRIPTS_$SCRIPT_NAME
+    
+You can setup your custom scripts to be run manually.
+
+`scripts_$script_name` (with $script_name being the name of the script). It will be run when called manually. 
+ie: `scripts_setup_cron` -> `deployapp --scripts --name setup_cron`
+
+
+    scripts_setup_cron:
+      -
+        command: "$PYTHON cron.py"
+
 ---
 
 ## WORKERS
@@ -423,21 +465,32 @@ It will create 3 directories:
 `www.logs`: A logs directory
 
 
-So your git path to push directly coul be:
+So your git path to push directly could be:
 
     ssh://my.ip.address/home/mydomain/www.git
-    
 
+    
 And when you `git push` it will update the `/home/mydomain/www` directory
 
 
-### deployapp --git-self-deploy $repo_name
+### deployapp --git-push-deploy $repo_name
 
 It will add the command `deployapp -w` in the *post-receive* hook file so it redeploy the app on each push. Good for Python app. 
 
-### deployapp --git-no-self-deploy $repo_name
 
+    cd /home/mydomain.com
+    
+    deployapp --git-push-deploy www
+    
+    
+### deployapp --git-push-no-deploy $repo_name
+    
 It will not auto deploy when you push to the directory.
+
+    cd /home/mydomain.com
+    
+    deployapp --git-push-no-deploy www
+
 
 ---
 

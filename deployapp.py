@@ -44,7 +44,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip --install jinja2")
 
-__version__ = "0.9.0"
+__version__ = "0.10.0"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Deployapp"
@@ -456,7 +456,11 @@ class App(object):
         self.directory = directory
         self.virtualenv = self.config["virtualenv"] if "virtualenv" in self.config else {}
 
-    def deploy_web(self):
+    def deploy_web(self, undeploy=False):
+        """
+        To deploy/undeploy web app/sites
+        :params undeploy: bool - True to remove
+        """
         if "web" in self.config:
             for site in self.config["web"]:
                 if "name" not in site:
@@ -472,14 +476,15 @@ class App(object):
                 proxy_port = None
                 remove = True if "remove" in site and site["remove"] is True else False
                 directory = self.directory
-
-                # Exclude from running
-                exclude = True if "exclude" in site and site["exclude"] is True else False
-                if exclude:
-                    continue
-
-                # Config file
                 nginx_config_file = get_domain_conf_file(name)
+                exclude = True if "exclude" in site and site["exclude"] is True else False
+
+                if undeploy:
+                    remove = True
+                    exclude = False
+
+                if exclude:  # Exclude this site from deploy/re-deployment
+                    continue
 
                 if remove:
                     if os.path.isfile(nginx_config_file):
@@ -539,8 +544,14 @@ class App(object):
         else:
             raise TypeError("'web' is missing in deployapp.yml")
 
-    def run_scripts(self, script_type=""):
-        script_key = "scripts%s" % script_type
+    def run_scripts(self, script_name=None):
+        """
+        Run a one time script
+        :params script_name: (string) The script name to run.
+        """
+        script_key = "scripts"
+        if script_name:
+            script_key = "scripts_%s" % script_name
         if script_key in self.config:
             for script in self.config[script_key]:
                 if "command" not in script:
@@ -555,7 +566,7 @@ class App(object):
                 command = _parse_command(command=script["command"], virtualenv=self.virtualenv.get("name"))
                 runvenv("cd %s; %s" % (directory, command), virtualenv=self.virtualenv.get("name"))
 
-    def run_workers(self):
+    def run_workers(self, undeploy=False):
         if "workers" in self.config:
             for worker in self.config:
                 if "name" not in worker:
@@ -569,10 +580,13 @@ class App(object):
                 directory = worker["directory"] if "directory" in worker else self.directory
                 command = _parse_command(command=worker["command"], virtualenv=self.virtualenv.get("name"))
                 remove = True if "remove" in worker and worker["remove"] is True else False
-
-                # Exclude from running
                 exclude = True if "exclude" in worker and worker["exclude"] is True else False
-                if exclude:
+
+                if undeploy:
+                    remove = True
+                    exclude = False
+
+                if exclude:  # Exclude worker from running
                     continue
 
                 if remove:
@@ -594,8 +608,13 @@ class App(object):
     def setup_virtualenv(self):
         if self.virtualenv.get("name"):
             if self.virtualenv.get("rebuild") is True:
-                virtualenv_remove(self.virtualenv.get("name"))
+                self.destroy_virtualenv()
             virtualenv_make(self.virtualenv.get("name"))
+
+    def destroy_virtualenv(self):
+        if self.virtualenv.get("name"):
+            virtualenv_remove(self.virtualenv.get("name"))
+
 
 def cmd():
     try:
@@ -605,14 +624,17 @@ def cmd():
         parser = argparse.ArgumentParser(description="%s %s" % (__NAME__, __version__))
         parser.add_argument("-w", "--websites", help="Deploy all sites", action="store_true")
         parser.add_argument("--scripts", help="Execute Pre/Post scripts", action="store_true")
+        parser.add_argument("--name", help="To execute a specific script by name [--scripts --name $myname]")
         parser.add_argument("--workers", help="Run Workers", action="store_true")
         parser.add_argument("--reload-server", help="To reload the servers", action="store_true")
 
+        parser.add_argument("--undeploy", help="To UNDEPLOY the application", action="store_true")
+
         parser.add_argument("--git-init", help="Setup a bare repo git. [--git-init www]")
-        parser.add_argument("--git-self-deploy", help="To self deploy upon git push"
-                                                      "[--git-self-deploy www]")
-        parser.add_argument("--git-no-self-deploy", help="To not self deploy upon git push"
-                                                      "[--git-no-self-deploy www]")
+        parser.add_argument("--git-push-deploy", help="To auto deploy upon git push"
+                                                      "[--git-push-deploy www]")
+        parser.add_argument("--git-push-no-deploy", help="To not auto deploy upon git push"
+                                                      "[--git-push-no-deploy www]")
         parser.add_argument("--non-verbose", help="Disable verbosity", action="store_true")
 
         arg = parser.parse_args()
@@ -641,42 +663,53 @@ def cmd():
                 _print(":: DEPLOY WEBSITES ::")
 
                 _print("> Running PRE-SCRIPTS ...")
-                app.run_scripts("_pre_web")
+                app.run_scripts("pre_web")
 
                 _print("> Deploying WEB ... ")
                 app.deploy_web()
 
                 _print("> Running POST-SCRIPTS ...")
-                app.run_scripts("_post_web")
+                app.run_scripts("post_web")
 
             if arg.scripts:
+                name = arg.name or None
                 _print("> Running SCRIPTS ...")
-                app.run_scripts()
+                app.run_scripts(name)
 
             if arg.workers:
                 _print("> Running WORKERS...")
                 app.run_workers()
 
-        if arg.git_init:
-            repo = arg.git_init
-            bare_repo = "%s/%s.git" % (CWD, repo)
-            _print("> Create Git Bare repo: %s" % bare_repo )
-            if git.init_bare_repo(repo):
+        elif arg.undeploy:
+            _print(":: UNDEPLOY ::")
+            app = App(CWD)
+            app.deploy_web(undeploy=True)
+            app.run_workers(undeploy=True)
+            app.run_scripts("undeploy")
+            app.destroy_virtualenv()
+
+        else:
+            if arg.git_init:
+                repo = arg.git_init
+                bare_repo = "%s/%s.git" % (CWD, repo)
+                _print("> Create Git Bare repo: %s" % bare_repo )
+                if git.init_bare_repo(repo):
+                    git.update_post_receive_hook(repo, False)
+
+            if arg.git_push_deploy:
+                repo = arg.git_push_deploy
+                _print("> Set Git Auto Deploy on Git Push")
+                git.update_post_receive_hook(repo, True)
+
+            if arg.git_push_no_deploy:
+                repo = arg.git_push_no_deploy
+                _print("> NO Git Auto Deploy on Git Push")
                 git.update_post_receive_hook(repo, False)
 
-        if arg.git_self_deploy:
-            repo = arg.git_self_deploy
-            _print("> Set Git Self Deploy")
-            git.update_post_receive_hook(repo, True)
+            if arg.reload_server:
+                _print("> Reloading server ...")
+                reload_server()
 
-        if arg.git_no_self_deploy:
-            repo = arg.git_no_self_deploy
-            _print("> Unset Git Push Deploy")
-            git.update_post_receive_hook(repo, False)
-
-        if arg.reload_server:
-            _print("> Reloading server ...")
-            reload_server()
 
     except Exception as ex:
         _print("ERROR: %s " % ex.__repr__())

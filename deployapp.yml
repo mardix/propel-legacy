@@ -58,6 +58,16 @@ web:
     nginx:
       root_dir: "html"
 
+# SCRIPTS TO RUN
+scripts:
+  -
+    command: ""
+  -
+    command: "$PYTHON myscript.py"
+    directory: ""
+    exclude: True # Prevent this script from resetting
+
+
 # SCRIPTS-PRE-WEB: To run script before web deploy
 scripts_pre_web:
   -
@@ -74,16 +84,26 @@ scripts_post_web:
     directory: ""
     command: "$PTHON myscript.py"
 
-# SCRIPTS TO RUN
-scripts:
+
+# SCRIPTS-UNDEPLOY: Will run this script when UNDEPLOYING
+scripts_undeploy:
   -
     command: ""
   -
-    command: "$PYTHON myscript.py"
     directory: ""
-    exclude: True # Prevent this script from resetting
+    command: "$PTHON myscript.py"
 
-# WORKERS
+
+# SCRIPTS-MY_SCRIPT_NAME: Run a custom script. --scripts --name my_script_name
+scripts_my_script_name:
+  -
+    command: ""
+  -
+    directory: ""
+    command: "$PTHON myscript.py"
+
+
+# WORKERS: Run custom script or app in the background using supervisor
 workers:
   -
     name: "myworker1"
@@ -94,3 +114,5 @@ workers:
     command: "$PYTHON myyworker2.py"
     user: ""
     exclude: True  # Prevent this worker from rerunning
+
+

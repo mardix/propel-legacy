@@ -1,0 +1,16 @@
+
+- 0.10.0
+    - added --undeploy to undeploy applications
+    - added option for undeploy script 'scripts_undeploy' to execute on --undeploy
+    - added option to run custom scripts '--scripts --name $script_name'
+    -
+
+- 0.9.0
+    - add server_name in nginx option to  allow multiple server_name
+
+- 0.8.3
+    - use $PYTHON & $LOCAL_BIN to refer to environment path
+
+- 0.8.2
+    - Added option to specify logs directly in the nginx config
+
