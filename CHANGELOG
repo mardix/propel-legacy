@@ -1,5 +1,5 @@
 - 0.10.1
-    - fixed mixing 'workers' key in deploy_workers()
+    - fixed missing 'workers' key in deploy_workers()
 
 - 0.10.0
     - added --undeploy to undeploy applications
