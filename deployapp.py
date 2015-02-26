@@ -44,7 +44,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip --install jinja2")
 
-__version__ = "0.10.0"
+__version__ = "0.10.1"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Deployapp"
@@ -568,7 +568,7 @@ class App(object):
 
     def run_workers(self, undeploy=False):
         if "workers" in self.config:
-            for worker in self.config:
+            for worker in self.config["workers"]:
                 if "name" not in worker:
                     raise TypeError("'name' is missing in workers")
                 if "command" not in worker:
