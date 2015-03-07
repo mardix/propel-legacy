@@ -447,13 +447,13 @@ Workers are scripts that are run continuously in the background and are monitore
 ## Some Goodies
 
  
-### deployapp --git-init $repo_name
+### deployapp --on $repo_name --git-init
 
 To create a `git bare repo` directory to push content to with `git push`
 
     cd /home/mydomain.com
     
-    deployapp --git-init www
+    deployapp --on www --git-init
     
 
 It will create 3 directories:
@@ -473,23 +473,22 @@ So your git path to push directly could be:
 And when you `git push` it will update the `/home/mydomain/www` directory
 
 
-### deployapp --git-push-deploy $repo_name
+### deployapp --on $repo_name --git-push-web
 
 It will add the command `deployapp -w` in the *post-receive* hook file so it redeploy the app on each push. Good for Python app. 
 
+    cd /home/mydomain.com
+    
+    deployapp --on www --git-push-web
+    
+    
+### deployapp --on $repo_name --git-push-cmd ''
+    
+To add custom command to be executed after a git push
 
     cd /home/mydomain.com
     
-    deployapp --git-push-deploy www
-    
-    
-### deployapp --git-push-no-deploy $repo_name
-    
-It will not auto deploy when you push to the directory.
-
-    cd /home/mydomain.com
-    
-    deployapp --git-push-no-deploy www
+    deployapp --on www --git-push-cmd 'ls -l'
 
 
 ---

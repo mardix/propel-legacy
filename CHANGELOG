@@ -1,3 +1,15 @@
+- 0.12.0
+    - Change some git command name
+        - '--git-init www' changed to '--on www --git-init'
+        - '--git-push-deploy www' changed to '--on www --git-push-web'
+        - '--git-push-no-deploy www' has been removed
+
+    - Added new git command
+        - '--on $repo_name --git-init' initiate the bare repo
+        - '--on $repo_name --git-push-web' Deploy a web app on each push
+        - '--on $repo_name --git-push-cmd '$cmd' ' Set a command to be executed on push
+        - '--on $repo_name --git-push-cmd ''' empty, it will remove all command
+
 - 0.10.1
     - fixed missing 'workers' key in deploy_workers()
 

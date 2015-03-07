@@ -44,7 +44,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip --install jinja2")
 
-__version__ = "0.10.1"
+__version__ = "0.12.0"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Deployapp"
@@ -211,9 +211,7 @@ do
     if [ "master" == "$branch" ]; then
         GIT_WORK_TREE={{ WORKING_DIR }} git checkout -f
         cd {{ WORKING_DIR }}
-        {% if SELF_DEPLOY_ON_PUSH %}
-        deployapp -w
-        {% endif %}
+        {{ COMMAND }}
     fi
 done
 """
@@ -431,7 +429,7 @@ class Git(object):
             return True
         return False
 
-    def update_post_receive_hook(self, repo, self_deploy=False):
+    def update_post_receive_hook(self, repo, command=""):
         working_dir, bare_repo = self.get_working_dir(repo)
         post_receice_hook_file = "%s/hooks/post-receive" % bare_repo
 
@@ -443,7 +441,7 @@ class Git(object):
 
         with open(post_receice_hook_file, "wb") as f:
             content = Template(POST_RECEIVE_HOOK_CONFIG)\
-                .render(WORKING_DIR=working_dir, SELF_DEPLOY_ON_PUSH=self_deploy)
+                .render(WORKING_DIR=working_dir, COMMAND=command)
             f.write(content)
         run("chmod +x %s " % post_receice_hook_file)
 
@@ -630,11 +628,12 @@ def cmd():
 
         parser.add_argument("--undeploy", help="To UNDEPLOY the application", action="store_true")
 
-        parser.add_argument("--git-init", help="Setup a bare repo git. [--git-init www]")
-        parser.add_argument("--git-push-deploy", help="To auto deploy upon git push"
-                                                      "[--git-push-deploy www]")
-        parser.add_argument("--git-push-no-deploy", help="To not auto deploy upon git push"
-                                                      "[--git-push-no-deploy www]")
+        parser.add_argument("--on", help="The name of the repo.")
+        parser.add_argument("--git-init", help="Setup a bare repo git. [--on www --git-init]", action="store_true")
+        parser.add_argument("--git-push-web", help="To deploy web on each push. "
+                                                          "ie: --on www --git-push-web", action="store_true")
+        parser.add_argument("--git-push-cmd", help="Command to execute after git push. "
+                                                   "ie: [--on www --git-push-cmd 'ls  -l']")
         parser.add_argument("--non-verbose", help="Disable verbosity", action="store_true")
 
         arg = parser.parse_args()
@@ -690,21 +689,30 @@ def cmd():
 
         else:
             if arg.git_init:
-                repo = arg.git_init
+                repo = arg.on
+                if not repo:
+                    raise ValueError("'--on $repo_name' is missing")
                 bare_repo = "%s/%s.git" % (CWD, repo)
                 _print("> Create Git Bare repo: %s" % bare_repo )
                 if git.init_bare_repo(repo):
                     git.update_post_receive_hook(repo, False)
 
-            if arg.git_push_deploy:
-                repo = arg.git_push_deploy
-                _print("> Set Git Auto Deploy on Git Push")
-                git.update_post_receive_hook(repo, True)
+            if arg.git_push_web:
+                repo = arg.on
+                if not repo:
+                    raise ValueError("'--on $repo_name' is missing")
+                cmd = "deployapp -w"
+                _print("> Set WEB auto deploy on git push")
+                git.update_post_receive_hook(repo, cmd)
 
-            if arg.git_push_no_deploy:
-                repo = arg.git_push_no_deploy
-                _print("> NO Git Auto Deploy on Git Push")
-                git.update_post_receive_hook(repo, False)
+            if arg.git_push_cmd:
+                repo = arg.on
+                if not repo:
+                    raise ValueError("'--on $repo_name' is missing")
+
+                cmd = arg.git_push_cmd
+                _print("> Set custom CMD on git push")
+                git.update_post_receive_hook(repo, cmd)
 
             if arg.reload_server:
                 _print("> Reloading server ...")
