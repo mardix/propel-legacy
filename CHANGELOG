@@ -1,3 +1,6 @@
+- 0.12.1
+    - Added $CWD to refer to the current working directory
+
 - 0.12.0
     - Change some git command name
         - '--git-init www' changed to '--on www --git-init'

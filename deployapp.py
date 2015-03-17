@@ -44,7 +44,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip --install jinja2")
 
-__version__ = "0.12.0"
+__version__ = "0.12.1"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Deployapp"
@@ -332,9 +332,10 @@ def get_deploy_config(directory):
             DEPLOY_CONFIG = yaml.load(jfile)
     return DEPLOY_CONFIG
 
-def _parse_command(command, virtualenv=None):
+def _parse_command(command, virtualenv=None, directory=None):
     command = command.replace("$PYTHON", get_venv_bin(bin_program="python", virtualenv=virtualenv))
     command = command.replace("$LOCAL_BIN", get_venv_bin(virtualenv=virtualenv))
+    command = command.replace("$CWD", directory)
     return command
 
 def reload_server():
@@ -561,7 +562,9 @@ class App(object):
                     continue
 
                 directory = script["directory"] if "directory" in script else self.directory
-                command = _parse_command(command=script["command"], virtualenv=self.virtualenv.get("name"))
+                command = _parse_command(command=script["command"],
+                                         virtualenv=self.virtualenv.get("name"),
+                                         directory=directory)
                 runvenv("cd %s; %s" % (directory, command), virtualenv=self.virtualenv.get("name"))
 
     def run_workers(self, undeploy=False):
@@ -576,7 +579,9 @@ class App(object):
                 user = worker["user"] if "user" in worker else "root"
                 environment = worker["environment"] if "environment" in worker else ""
                 directory = worker["directory"] if "directory" in worker else self.directory
-                command = _parse_command(command=worker["command"], virtualenv=self.virtualenv.get("name"))
+                command = _parse_command(command=worker["command"],
+                                         virtualenv=self.virtualenv.get("name"),
+                                         directory=directory)
                 remove = True if "remove" in worker and worker["remove"] is True else False
                 exclude = True if "exclude" in worker and worker["exclude"] is True else False
 
