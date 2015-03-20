@@ -44,7 +44,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip --install jinja2")
 
-__version__ = "0.12.1"
+__version__ = "0.12.2"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Deployapp"
@@ -488,7 +488,7 @@ class App(object):
                 if remove:
                     if os.path.isfile(nginx_config_file):
                         os.remove(nginx_config_file)
-                    if "application" in site:
+                    if application:
                         Supervisor.stop(name=gunicorn_app_name, remove=True)
                     continue
 

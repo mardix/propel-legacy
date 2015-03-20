@@ -1,3 +1,6 @@
+- 0.12.2
+    - Small refactor. Use var application instead of checking if it's exist again
+
 - 0.12.1
     - Added $CWD to refer to the current working directory
 
