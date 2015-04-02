@@ -37,12 +37,22 @@ web:
       workers: 4
       threads: 8
 
-
     # Prevent site from being redeployed
     exclude: True
 
     # To remove the site configuration
     remove: True
+
+    # 0.13.0
+    maintenance:
+      status: Off
+      page: "/maintenance/index.html"
+      aliases:
+        "/static": "maintenance/static"
+      keep_server_on: True
+      allowed_ips:
+        - 1.2.4.5
+        - 2.3.4.5
 
   -
     name: "sub.mysite.com"

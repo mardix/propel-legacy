@@ -1,3 +1,7 @@
+- 0.13.0
+    - Add maintenance page functionalities
+
+
 - 0.12.2
     - Small refactor. Use var application instead of checking if it's exist again
 

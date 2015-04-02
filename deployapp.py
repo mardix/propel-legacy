@@ -468,13 +468,9 @@ class App(object):
                     raise TypeError("'virtualenv' in required for web Python app")
 
                 name = site["name"]
-                nginx = site["nginx"] if "nginx" in site else {}
-                gunicorn_option = site["gunicorn"] if "gunicorn" in site else {}
                 application = site["application"] if "application" in site else None
                 gunicorn_app_name = "gunicorn_%s" % (name.replace(".", "_"))
-                proxy_port = None
                 remove = True if "remove" in site and site["remove"] is True else False
-                directory = self.directory
                 nginx_config_file = get_domain_conf_file(name)
                 exclude = True if "exclude" in site and site["exclude"] is True else False
 
@@ -492,56 +488,85 @@ class App(object):
                         Supervisor.stop(name=gunicorn_app_name, remove=True)
                     continue
 
-                # Python app will use Gunicorn+Gevent and Supervisor
-                if application:
-                    proxy_port = generate_random_port()
-                    default_gunicorn = {
-                        "workers": (multiprocessing.cpu_count() * 2) + 1,
-                        "threads": 4,
-                        "max-requests": GUNICORN_DEFAULT_MAX_REQUESTS,
-                        "worker-class": GUNICORN_DEFAULT_WORKER_CLASS
-                    }
-                    gunicorn_option.update(default_gunicorn)
-
-                    settings = " ".join(["--%s %s" % (x[0], x[1]) for x in gunicorn_option.items()])
-                    gunicorn_bin = get_venv_bin(bin_program="gunicorn", virtualenv=self.virtualenv.get("name"))
-                    command = "{GUNICORN_BIN} -b 0.0.0.0:{PROXY_PORT} {APP} {SETTINGS}"\
-                              .format(GUNICORN_BIN=gunicorn_bin,
-                                      PROXY_PORT=proxy_port,
-                                      APP=application,
-                                      SETTINGS=settings,)
-
-                    Supervisor.start(name=gunicorn_app_name,
-                                     command=command,
-                                     directory=directory)
-
-                logs_dir = nginx.get("logs_dir", None)
-                if not logs_dir:
-                    logs_dir = "%s.logs" % self.directory
-                    if not os.path.isdir(logs_dir):
-                        os.makedirs(logs_dir)
-
-                with open(nginx_config_file, "wb") as f:
-                    context = dict(NAME=name,
-                                   SERVER_NAME=nginx.get("server_name", name),
-                                   DIRECTORY=directory,
-                                   PROXY_PORT=proxy_port,
-                                   PORT=nginx.get("port", NGINX_DEFAULT_PORT),
-                                   ROOT_DIR=nginx.get("root_dir", ""),
-                                   ALIASES=nginx.get("aliases", {}),
-                                   FORCE_NON_WWW=nginx.get("force_non_www", False),
-                                   FORCE_WWW=nginx.get("force_www", False),
-                                   SERVER_DIRECTIVES=nginx.get("server_directives", ""),
-                                   SSL_CERT=nginx.get("ssl_cert", ""),
-                                   SSL_KEY=nginx.get("ssl_key", ""),
-                                   SSL_DIRECTIVES=nginx.get("ssl_directives", ""),
-                                   LOGS_DIR=logs_dir
-                                   )
-                    content = Template(NGINX_CONFIG).render(**context)
-                    f.write(content)
+                # Deploy
+                self._deploy_web(site)
             reload_server()
         else:
             raise TypeError("'web' is missing in deployapp.yml")
+
+
+    def _deploy_web(self, site):
+        """
+        Deploy
+        """
+        if "name" not in site:
+            raise TypeError("'name' is missing in sites config")
+        if "application" in site and not self.virtualenv.get("name"):
+            raise TypeError("'virtualenv' in required for web Python app")
+
+        name = site["name"]
+        nginx = site["nginx"] if "nginx" in site else {}
+        gunicorn_option = site["gunicorn"] if "gunicorn" in site else {}
+        application = site["application"] if "application" in site else None
+        gunicorn_app_name = "gunicorn_%s" % (name.replace(".", "_"))
+        proxy_port = None
+        directory = self.directory
+        nginx_config_file = get_domain_conf_file(name)
+
+        # Python app will use Gunicorn+Gevent and Supervisor
+        if application:
+            proxy_port = generate_random_port()
+            default_gunicorn = {
+                "workers": (multiprocessing.cpu_count() * 2) + 1,
+                "threads": 4,
+                "max-requests": GUNICORN_DEFAULT_MAX_REQUESTS,
+                "worker-class": GUNICORN_DEFAULT_WORKER_CLASS
+            }
+            gunicorn_option.update(default_gunicorn)
+
+            settings = " ".join(["--%s %s" % (x[0], x[1]) for x in gunicorn_option.items()])
+            gunicorn_bin = get_venv_bin(bin_program="gunicorn", virtualenv=self.virtualenv.get("name"))
+            command = "{GUNICORN_BIN} -b 0.0.0.0:{PROXY_PORT} {APP} {SETTINGS}"\
+                      .format(GUNICORN_BIN=gunicorn_bin,
+                              PROXY_PORT=proxy_port,
+                              APP=application,
+                              SETTINGS=settings,)
+
+            Supervisor.start(name=gunicorn_app_name,
+                             command=command,
+                             directory=directory)
+
+        logs_dir = nginx.get("logs_dir", None)
+        if not logs_dir:
+            logs_dir = "%s.logs" % self.directory
+            if not os.path.isdir(logs_dir):
+                os.makedirs(logs_dir)
+
+        with open(nginx_config_file, "wb") as f:
+            context = dict(NAME=name,
+                           SERVER_NAME=nginx.get("server_name", name),
+                           DIRECTORY=directory,
+                           PROXY_PORT=proxy_port,
+                           PORT=nginx.get("port", NGINX_DEFAULT_PORT),
+                           ROOT_DIR=nginx.get("root_dir", ""),
+                           ALIASES=nginx.get("aliases", {}),
+                           FORCE_NON_WWW=nginx.get("force_non_www", False),
+                           FORCE_WWW=nginx.get("force_www", False),
+                           SERVER_DIRECTIVES=nginx.get("server_directives", ""),
+                           SSL_CERT=nginx.get("ssl_cert", ""),
+                           SSL_KEY=nginx.get("ssl_key", ""),
+                           SSL_DIRECTIVES=nginx.get("ssl_directives", ""),
+                           LOGS_DIR=logs_dir
+                           )
+            content = Template(NGINX_CONFIG).render(**context)
+            f.write(content)
+
+
+    def maintenance(self):
+        """
+        To set a site on maintenance
+        """
+        pass
 
     def run_scripts(self, script_name=None):
         """
@@ -610,7 +635,7 @@ class App(object):
 
     def setup_virtualenv(self):
         if self.virtualenv.get("name"):
-            if self.virtualenv.get("rebuild") is True:
+            if self.virtualenv.get("rebuild") == True:
                 self.destroy_virtualenv()
             virtualenv_make(self.virtualenv.get("name"))
 
@@ -632,6 +657,7 @@ def cmd():
         parser.add_argument("--reload-server", help="To reload the servers", action="store_true")
 
         parser.add_argument("--undeploy", help="To UNDEPLOY the application", action="store_true")
+        parser.add_argument("--maintenance", help="Values: on|off - To set the site on maintence. ie [--maintenance on]")
 
         parser.add_argument("--on", help="The name of the repo.")
         parser.add_argument("--git-init", help="Setup a bare repo git. [--on www --git-init]", action="store_true")
@@ -684,6 +710,7 @@ def cmd():
                 _print("> Running WORKERS...")
                 app.run_workers()
 
+        # Undeploy
         elif arg.undeploy:
             _print(":: UNDEPLOY ::")
             app = App(CWD)
@@ -692,6 +719,15 @@ def cmd():
             app.run_scripts("undeploy")
             app.destroy_virtualenv()
 
+        # Maintenance
+        elif arg.maintenance:
+            _maintenance = arg.maintenance.upper()
+            if _maintenance == "ON":
+                pass
+            elif _maintenance == "OFF":
+                pass
+
+        # Goodies
         else:
             if arg.git_init:
                 repo = arg.on
