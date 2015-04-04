@@ -1,13 +1,27 @@
 # Deployapp
 
-**Deployapp** is a package to deploy multiple Python sites/application in virtualenv.  
-It also allows you to deploy PHP/HTML applications, run scripts and run workers with Supervisor.
+### About
 
-For Python applications it uses Virtualenv to isolate each application, 
-Gunicorn+Gevent as the backend server, Supervisor to monitor it and Nginx as proxy.
+Deployapp is a script that allows you to deploy multiple Python/PHP/HTML sites 
+on a single server, run scripts and background workers.
 
-For PHP/HTML sites, it just uses the path as it would in normal environment, 
-and you must have php-fpm for Nginx configured already.
+#### Deploy Python
+Deployapp allows you deploy multiple Python sites/applications (Flask, Django)
+by isolating each app into its own virtualenv, using Virtualenvwrapper, then 
+puts it online using Gunicon+Gevent under Supervisor, to make sure it's alway up. 
+Then uses NGinx as proxy to access the sites.
+
+#### Deploy PHP/HTML
+Deployapp is not limited to only Python app, it can deploy PHP/HTML sites too 
+using PHP-FPM.
+
+#### Script and Workers
+Besides deploying sites/apps. Deployapp can run scripts before and after deployment.
+Run other scripts individually. And background running scripts (workers) with Supervisor. 
+
+#### Maintenance mode
+Deployapp also has a maintenance mode that will display a maintenance page when the 
+website is down for maintenance or is being deployed.
 
 
 West Side Story: I created this package because I wanted to deploy multiple isolated Flask sites on a single DigitalOcean instance. 
@@ -46,19 +60,15 @@ Requirements:
 
 	pip install deployapp
 
-After installing *deployapp* for the first time, run the following command to setup Supervisor conf and logs directories compatible to deployapp.
+After installing *deployapp* for the first time, run the following command to setup 
+Supervisor conf and logs directories compatible to deployapp.
 
     deployapp-setup
 
 
-One more thing you may need to do, is add the `virtualenvwrapper` in your `.bashrc`:
-
-    export VIRTUALENVWRAPPER_PYTHON=/usr/local/bin/python2.7
-    source /usr/local/bin/virtualenvwrapper.sh
-
-** of course use the right Python version of your environment
-
 ** You may need root admin
+
+You may also need to install some other packages based on your system.
 
 Once done, you should be good to go.
 
@@ -84,32 +94,39 @@ To deploy websites. It will also run scripts_pre_web and scripts_post_web
     deployapp -w
 
 
-#### deployapp --scripts
-
-To run scripts
-
-    deployapp --scripts
     
-
-### deployapp --scripts --name my_script_name
+### deployapp -s | --scripts [name, [names ...]]
 
 To run a custom script
 
-    deployapp --scripts --name my_script_name
+    deployapp --scripts my_script_name
     
+Run multiple scripts
 
-#### deployapp --workers
+    deployapp --scripts my_script_name another_script a_third_script
+    
+    
+#### deployapp -k | --workers
 
 To run workers in the background using Supervisor
 
     deployapp --workers
 
 
-### deployapp --undeploy
+### deployapp -x | --undeploy
 
 To undeploy all. It will remove sites, scripts, workers, and destroy the virtualenv
 
     deployapp --undeploy
+
+
+### deployapp -m | --maintenance on|off
+
+To activate/deactivate the site maintenance page
+
+    deployapp --maintenance on
+    
+    deployapp --maintenance off
 
 ---
 
@@ -140,11 +157,14 @@ To undeploy all. It will remove sites, scripts, workers, and destroy the virtual
 
 Upon deploying a Python app, Deployapp will the following:
 
+- Instantly set the site on maintenance mode. So when a visitor comes, the will a maintenance page 
+
 - create the virtualenv
 
 - install the requirements.txt in the virtualenv
 
-- create a random port and assign it to Gunicorn. By default it will assign `gevent` as the worker-class for Gunicorn, set the numbers of workers and threads.
+- create a random port and assign it to Gunicorn. By default it will assign `gevent` 
+as the worker-class for Gunicorn, set the numbers of workers and threads.
 
 - add the Gunicorn command to Supervisor for process monitoring 
 
@@ -325,6 +345,17 @@ To disable any of the default values, you can set them as empty or use the desir
 For more config, please refer to: http://docs.gunicorn.org/en/develop/configure.html
 
 
+#### Maintenance config
+
+The maintenance config allows you to set page to show and turn on/off automatically 
+
+- active: (bool) Turn on/off maintenance page
+
+- page: (path) The maintenance page. If it doesn't exist, it will fallback to the deployapp default one
+
+- allowed_ips: (list) List of ips to allow. When allowed_ips is available, it will allow the ips to 
+access the site, but show the maintenance page to all others. 
+
 
 ---
 
@@ -332,7 +363,9 @@ For more config, please refer to: http://docs.gunicorn.org/en/develop/configure.
 
 Deployapp allows you to run scripts. Scripts can be run as is, or before and after deployment:
 
-Scripts is a list of dict of scripts to run. It must have the `command` param, and optionally `directory` if the script is not being excuted from the same directory. When `directory` is provided, it will `cd` into it and run the `command`
+Scripts is a dict of with script name to execute. A script can contain multiple commands 
+
+Each command must have the `command` param, and optionally `directory` if the script is not being excuted from the same directory. When `directory` is provided, it will `cd` into it and run the `command`
 
     scripts:
       -
@@ -342,6 +375,50 @@ Scripts is a list of dict of scripts to run. It must have the `command` param, a
         directory: "/my-directory"        
 
 
+
+      # PRE-WEB: scripts to run before web deployment
+      pre_web:
+        -
+          command: "ls -l"
+        -
+          command: "myscript.py"
+          directory: ""
+    
+      # POST-WEB: scripts to run after web deployment
+      post_web:
+        -
+          command: "uname"
+        -
+          directory: ""
+          command: "$PTHON myscript.py"
+    
+    
+      # UNDEPLOY: Will run this script when UNDEPLOYING
+      undeploy:
+        -
+          command: "time"
+        -
+          directory: ""
+          command: "$PTHON myscript.py"
+    
+    
+      # MY_SCRIPT_NAME: Custom script by name
+      my_script_name:
+        -
+          command: ""
+        -
+          directory: ""
+          command: "$PTHON myscript.py"
+          
+And to run any of these scripts, you can just do:
+
+    deployapp -s my_script_name
+    
+or multiple scripts:
+    
+    deployapp -s my_script_name another_script 
+    
+    
 #### Scripts command with variables: $PYTHON and $LOCAL_BIN
 
 As a convenience, there are a few variables to refer to the virtualenv. They allow you to refer to the location without knowing the full path, specially when in virtualenv.
@@ -350,8 +427,8 @@ As a convenience, there are a few variables to refer to the virtualenv. They all
 
 - $LOCAL_BIN: refers to the local bin like (ie: /root/.virtualenvs/myvirtualenv/local/bin/)
 
+- $CWD: refers to the current working directory
 
-      scripts:
         -
           command: "$PYTHON manage.py"
 
@@ -366,42 +443,45 @@ The command above will execute the manage.py with the virtualenv python.
 - exclude: (bool) When True it will no run or rerun the worker
 
 
-#### SCRIPTS_PRE_WEB & SCRIPTS_POST_WEB
+#### PRE_WEB & POST_WEB
 
-`scripts_pre_web` and `scripts_post_web` are run before and after web deployment respectively, and follow the same rules as SCRIPTS above.
+`pre_web` and `post_web` are run before and after web deployment respectively, and follow the same rules as SCRIPTS above.
 
-
-    scripts_pre_web:
-      -
-        command: "$PYTHON myscript.py"
-    
-    scripts_post_web:
-      -
-        command: "$PTHON another-script.py"
+    scripts:
+        pre_web:
+          -
+            command: "$PYTHON myscript.py"
+        
+        post_web:
+          -
+            command: "$PTHON another-script.py"
         
 
-#### SCRIPTS_UNDEPLOY
+#### UNDEPLOY
 
-`scripts_undeploy` will run when undeploying the application. It can be used to clean up etc.
+`undeploy` will run when undeploying the application. It can be used to clean up etc when removing the site.
+ie: `deployapp --undeploy`
 
-
-    scripts_undeploy:
-      -
-        command: "$PYTHON myscript.py"
+    scripts:
+      undeploy:
+        - command: "time"
+        - command: "rm some_path"
         
         
-#### Custom Scripts: SCRIPTS_$SCRIPT_NAME
+#### Custom Scripts: $SCRIPT_NAME
     
 You can setup your custom scripts to be run manually.
 
-`scripts_$script_name` (with $script_name being the name of the script). It will be run when called manually. 
-ie: `scripts_setup_cron` -> `deployapp --scripts --name setup_cron`
+`$script_name` (with $script_name being the name of the script). It will be run when called manually. 
+ie: `deployapp -s setup_cron`
 
+    scripts:
+      setup_cron:
+        -
+          directory: ""
+          command: "mysetup_cron_script"
 
-    scripts_setup_cron:
-      -
-        command: "$PYTHON cron.py"
-
+    
 ---
 
 ## WORKERS
@@ -423,6 +503,7 @@ Workers are scripts that are run continuously in the background and are monitore
         environement: ""
         exclude: True 
 
+
 **Config description**
 
 - name: (string) (required) The name of the worker
@@ -439,21 +520,92 @@ Workers are scripts that are run continuously in the background and are monitore
 
 - remove: (bool) When True it will remove the worker from the script
 
+---
+
+## MAINTENANCE
+
+Deployapp allows you to set your site on Maintenance mode. When visitors come to the site, they will be
+greeted with a maintenance page to tell them the site is under maintenance. 
+
+To manually set the site under maintenance
+
+    deployapp --maintenance on 
+    
+    // or 
+    
+    deployapp -m on
+    
+And to remove it
+
+    deployapp --maintenance off
+    
+    // or 
+    
+    deployapp -m off
+
+Deployapp already has a default page that it will render upon being under maintenance.
+
+
+#### Set the maintenance in deployapp.yml
+
+You can also set the maintenance mode in the `deployapp.yml`. This way it will turn on/off maintenance each time 
+you run `deployapp -w`
+
+Edit your `deployapp.yml` and add the line below.
+
+    maintenance:
+      active: True 
+     
+      
+#### Set a custom maintenance page
+
+To set your custom maintenance page, add the `page` under maintenance. The page must be relative to the site's root
+      
+    maintenance:
+      active: True  
+      page: "maintenance/index.html" 
+
+So if your site is at: /home/mysite.com, the maintenance page is at: /home/mysite.com/maintenance/index.html
+
+
+#### Put site under maintenance, but give full access to certain ips
+
+Sometimes, even if the site is under maintenance, you would like to check everything on it to make sure it works 
+before activate it back again; or you would want to give certain people access before going live.
+
+To do so, Deployapp allows to set a list of ips you would like to give access while the site is under maintenance
+
+    maintenance:
+      active: True
+      allow_ips: # List of ips to allow to view the site
+        - 1.2.4.5
+        - 2.3.4.5
+        
+#### Deactive Maintenance
+
+To deactivate and put the full site back online
+
+    maintenance:
+      active: False
+
+If the site is under maintenance using deployapp.yml, `deployapp -m off` will not turn off maintenance. 
+You must deactivate it in deployapp.yml
+
 
 ---
 ---
  
  
-## Some Goodies
+## Some Xtra
 
  
-### deployapp --on $repo_name --git-init
+### deployapp --git-init $repo_name 
 
 To create a `git bare repo` directory to push content to with `git push`
 
     cd /home/mydomain.com
     
-    deployapp --on www --git-init
+    deployapp --git-init www
     
 
 It will create 3 directories:
@@ -473,22 +625,22 @@ So your git path to push directly could be:
 And when you `git push` it will update the `/home/mydomain/www` directory
 
 
-### deployapp --on $repo_name --git-push-web
+### deployapp --git-push-web $repo_name 
 
 It will add the command `deployapp -w` in the *post-receive* hook file so it redeploy the app on each push. Good for Python app. 
 
     cd /home/mydomain.com
     
-    deployapp --on www --git-push-web
+    deployapp --git-push-web www
     
     
-### deployapp --on $repo_name --git-push-cmd ''
+### deployapp --git-push-cmd $repo_name  [cmd, [cmd...]]
     
 To add custom command to be executed after a git push
 
     cd /home/mydomain.com
     
-    deployapp --on www --git-push-cmd 'ls -l'
+    deployapp --git-push-cmd www 'ls -l' 'cd /' ''
 
 
 ---

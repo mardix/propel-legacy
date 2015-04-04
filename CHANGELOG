@@ -1,5 +1,25 @@
-- 0.13.0
-    - Add maintenance page functionalities
+- 0.20.0
+
+    - Add maintenance page
+    - Added more setup config in deployapp-setup
+        - install nginx
+        - install php-fpm
+        - setup virtualenvwrapper
+        -
+    - no longer have 'exclude' option in web
+    - change scripts into dict with multiple keys to run
+    - new command
+        --maintenance on | off
+    - rename git command
+        --git-init $repo_name
+        --git-push-web $repo_name
+        --git-push-cmd $repo_name '$cmd1' '$cmd2' '$cmd...'
+    - short command
+        -w => --website
+        -s => --scripts
+        -k => --workers
+        -x => --undeploy
+        -m => --maintenance
 
 
 - 0.12.2

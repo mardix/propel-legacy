@@ -1,19 +1,19 @@
 
 # Deployapp
 # Config file
-# deployapp (--websites | --scripts | --workers)
+# deployapp -w
 
 ---
 # Virtualenv
 virtualenv:
-  name: ""
-  directory: ""
-  rebuild: ""
+  name: ""  # The name of the virtualenv. Required for python web/workers
+  directory: "" # The directory of the virtualenvs, by default it's /root/.virtualenvs
+  rebuild: ""  # (bool) To rebuild
 
-# Sites: list of dict of web sites application
+# WEB: list of dict of web sites/application to deploy
 web:
   -
-    # The site name
+
     name: "mysite.com" # The site name
     application: "run_mysite:flask_app" # for python application
 
@@ -32,27 +32,14 @@ web:
       ssl_cert: ""
       ssl_key: ""
 
+
     # Gunicorn option (Optional. Python only)
     gunicorn:
       workers: 4
       threads: 8
 
-    # Prevent site from being redeployed
-    exclude: True
-
     # To remove the site configuration
     remove: True
-
-    # 0.13.0
-    maintenance:
-      status: Off
-      page: "/maintenance/index.html"
-      aliases:
-        "/static": "maintenance/static"
-      keep_server_on: True
-      allowed_ips:
-        - 1.2.4.5
-        - 2.3.4.5
 
   -
     name: "sub.mysite.com"
@@ -68,49 +55,42 @@ web:
     nginx:
       root_dir: "html"
 
-# SCRIPTS TO RUN
+# SCRIPTS: A dict of all scripts to execute
 scripts:
-  -
-    command: ""
-  -
-    command: "$PYTHON myscript.py"
-    directory: ""
-    exclude: True # Prevent this script from resetting
+
+  # PRE-WEB: scripts to run before web deployment
+  pre_web:
+    -
+      command: ""
+    -
+      command: "myscript.py"
+      directory: ""
+
+  # POST-WEB: scripts to run after web deployment
+  post_web:
+    -
+      command: ""
+    -
+      directory: ""
+      command: "$PTHON myscript.py"
 
 
-# SCRIPTS-PRE-WEB: To run script before web deploy
-scripts_pre_web:
-  -
-    command: ""
-  -
-    command: "myscript.py"
-    directory: ""
-
-# SCRIPTS-POST-WEB: To run after web deploy
-scripts_post_web:
-  -
-    command: ""
-  -
-    directory: ""
-    command: "$PTHON myscript.py"
+  # UNDEPLOY: Will run this script when UNDEPLOYING
+  undeploy:
+    -
+      command: ""
+    -
+      directory: ""
+      command: "$PTHON myscript.py"
 
 
-# SCRIPTS-UNDEPLOY: Will run this script when UNDEPLOYING
-scripts_undeploy:
-  -
-    command: ""
-  -
-    directory: ""
-    command: "$PTHON myscript.py"
-
-
-# SCRIPTS-MY_SCRIPT_NAME: Run a custom script. --scripts --name my_script_name
-scripts_my_script_name:
-  -
-    command: ""
-  -
-    directory: ""
-    command: "$PTHON myscript.py"
+  # MY_SCRIPT_NAME: Custom script by name
+  my_script_name:
+    -
+      command: ""
+    -
+      directory: ""
+      command: "$PTHON myscript.py"
 
 
 # WORKERS: Run custom script or app in the background using supervisor
@@ -124,5 +104,15 @@ workers:
     command: "$PYTHON myyworker2.py"
     user: ""
     exclude: True  # Prevent this worker from rerunning
+
+
+# MAINTENANCE: To turn on/off maintenance programmatically
+maintenance:
+  active: True  # Bool to turn on and off maintenance
+  page: "maintenance/index.html" # The maintenance page to use instead of the default, relative to the site's root
+  allow_ips: # List of ips to allow to view the site
+    - 1.2.4.5
+    - 2.3.4.5
+
 
 

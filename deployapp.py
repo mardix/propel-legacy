@@ -18,8 +18,6 @@ Requirements:
     Virtualenvwrapper
     php-fpm
 
-** TESTED ON CENTOS AND WITH PYTHON 2.7
-
 @Author: Mardix
 @Copyright: 2015 Mardix
 @license: MIT
@@ -27,6 +25,7 @@ Requirements:
 """
 
 import os
+import sys
 import datetime
 import subprocess
 import multiprocessing
@@ -35,20 +34,23 @@ import random
 import argparse
 import shutil
 import platform
+import getpass
 try:
     import yaml
 except ImportError as ex:
-    print("PyYaml is missing. pip --install pyyaml")
+    print("PyYaml is missing. pip install pyyaml")
 try:
     from jinja2 import Template
 except ImportError as ex:
-    print("Jinja2 is missing. pip --install jinja2")
+    print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.12.2"
+__version__ = "0.20.0"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Deployapp"
 
+PY_EXECUTABLE = sys.executable
+PY_USER = getpass.getuser()
 CWD = os.getcwd()
 
 NGINX_DEFAULT_PORT = 80
@@ -69,13 +71,15 @@ DEPLOY_CONFIG = None
 DIST_CONF = {
     "RHEL": {
         "NGINX_CONF_FILE": "/etc/nginx/conf.d/%s.conf",
-        "RESTART_NGINX": "service nginx restart",
-        "RELOAD_NGINX": "service nginx reload"
+        "YUM": "yum",
+        "NGINX_SERVICE": "nginx",
+        "PHPFPM_SERVICE": "php-fpm"
     },
     "DEBIAN": {
         "NGINX_CONF_FILE": "/etc/nginx/sites-enabled/%s.conf",
-        "RESTART_NGINX": "service nginx restart",
-        "RELOAD_NGINX": "service nginx reload"
+        "YUM": "apt-get",
+        "NGINX_SERVICE": "nginx",
+        "PHPFPM_SERVICE": "php5-fpm"
     }
 }
 
@@ -109,13 +113,16 @@ NGINX_CONFIG = """
     {%- endif -%}
 {% endmacro -%}
 
-server {
 
+server {
     listen {{ PORT }};
     server_name {{ SERVER_NAME }};
     root {{ SET_PATH(DIRECTORY, ROOT_DIR) }};
+
+    {% if LOGS_DIR %}
     access_log {{ LOGS_DIR }}/access_{{ SERVER_NAME }}.log;
     error_log {{ LOGS_DIR }}/error_{{ SERVER_NAME }}.log;
+    {% endif %}
 
 {%- if SSL_DIRECTIVES %}
 
@@ -138,33 +145,74 @@ server {
 
 {% endif -%}
 
-{% if PROXY_PORT %}
-    location / {
-        proxy_pass http://127.0.0.1:{{ PROXY_PORT }}/;
-        proxy_redirect off;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Host $server_name;
-        proxy_set_header X-Forwarded-Proto $scheme;
+
+{% if MAINTENANCE["ACTIVE"] %}
+    set $maintenance on;
+
+    {% set maintenance_page = "maintenance.html" %}
+    {% if MAINTENANCE["PAGE"] %}
+        {% set maintenance_page =  MAINTENANCE["PAGE"] %}
+    {% endif %}
+
+    # allow ips
+    {% if MAINTENANCE["ALLOW_IPS"] %}
+        if ($remote_addr ~ ({{ MAINTENANCE["ALLOW_IPS"] | join("|") }})) {
+            set $maintenance off;
+        }
+    {% endif %}
+
+    if ($maintenance = on) {
+        return 503;
     }
+
+    error_page 503 @maintenance;
+    location @maintenance {
+        {% if not MAINTENANCE["PAGE"] %}
+            root /var/deployapp;
+        {% endif %}
+
+         rewrite ^(.*)$ /{{ maintenance_page }} break;
+    }
+{% endif %}
+
+
+{% if (not MAINTENANCE["ACTIVE"])  or (MAINTENANCE["ACTIVE"] and MAINTENANCE["ALLOW_IPS"]) %}
+    {% if PROXY_PORT %}
+        location / {
+            proxy_pass http://127.0.0.1:{{ PROXY_PORT }}/;
+            proxy_redirect off;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $server_name;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+    {% else %}
+
+        location / {
+            index index.html index.htm index.php;
+        }
+
+        # Pass PHP scripts to PHP-FPM
+        location ~* \.php$ {
+            fastcgi_index   index.php;
+            fastcgi_pass    127.0.0.1:9000;
+            include         fastcgi_params;
+            fastcgi_param   SCRIPT_FILENAME    $document_root$fastcgi_script_name;
+            fastcgi_param   SCRIPT_NAME        $fastcgi_script_name;
+        }
+
+    {% endif %}
 
 {% else %}
 
     location / {
-        index index.html index.htm index.php;
-    }
-
-    # Pass PHP scripts to PHP-FPM
-    location ~* \.php$ {
-        fastcgi_index   index.php;
-        fastcgi_pass    127.0.0.1:9000;
-        include         fastcgi_params;
-        fastcgi_param   SCRIPT_FILENAME    $document_root$fastcgi_script_name;
-        fastcgi_param   SCRIPT_NAME        $fastcgi_script_name;
+        return 503;
     }
 
 {% endif %}
+
 
 {%- if ALIASES %}
     {%- for alias, location in ALIASES.items() %}
@@ -277,8 +325,8 @@ def get_dist_config(key):
     """
     dist = get_dist()
     if dist in DIST_CONF:
-        return DIST_CONF[dist].get(key, None)
-    return None
+        return DIST_CONF[dist].get(key)
+    raise AttributeError("Dist config '%s' not found" % key)
 
 def get_dist():
     """
@@ -293,15 +341,11 @@ def get_dist():
         return "RHEL"
     elif dist_name.upper() in ["DEBIAN", "UBUNTU"]:
         return "DEBIAN"
-    elif not dist_name and system_name.upper() == "DARWIN":
-        return "OSX"
-    return None
+    raise NotImplemented("Platform '%s' is not compatible with Deployapp" % dist_name)
 
 def nginx_reload():
-    run(get_dist_config("RELOAD_NGINX"))
-
-def nginx_restart():
-    run(get_dist_config("RESTART_NGINX"))
+    run("service %s reload" % get_dist_config("NGINX_SERVICE"))
+    run("service %s reload" % get_dist_config("PHPFPM_SERVICE"))
 
 def get_domain_conf_file(domain):
     return get_dist_config("NGINX_CONF_FILE") % domain
@@ -455,11 +499,18 @@ class App(object):
         self.directory = directory
         self.virtualenv = self.config["virtualenv"] if "virtualenv" in self.config else {}
 
-    def deploy_web(self, undeploy=False):
+    def deploy_web(self, undeploy=False, maintenance=False):
         """
         To deploy/undeploy web app/sites
-        :params undeploy: bool - True to remove
         """
+
+        # Maintenance
+        _maintenance = {"active": False, "page": None, "allow_ips": []}
+        if "maintenance" in self.config:
+            _maintenance.update(self.config["maintenance"])
+        elif maintenance:
+            _maintenance.update({"active": True})
+
         if "web" in self.config:
             for site in self.config["web"]:
                 if "name" not in site:
@@ -468,116 +519,137 @@ class App(object):
                     raise TypeError("'virtualenv' in required for web Python app")
 
                 name = site["name"]
+                nginx = site["nginx"] if "nginx" in site else {}
+                gunicorn_option = site["gunicorn"] if "gunicorn" in site else {}
                 application = site["application"] if "application" in site else None
                 gunicorn_app_name = "gunicorn_%s" % (name.replace(".", "_"))
+                proxy_port = None
                 remove = True if "remove" in site and site["remove"] is True else False
+                directory = self.directory
                 nginx_config_file = get_domain_conf_file(name)
-                exclude = True if "exclude" in site and site["exclude"] is True else False
 
-                if undeploy:
-                    remove = True
-                    exclude = False
 
-                if exclude:  # Exclude this site from deploy/re-deployment
-                    continue
-
-                if remove:
+                if remove or undeploy:
                     if os.path.isfile(nginx_config_file):
                         os.remove(nginx_config_file)
                     if application:
                         Supervisor.stop(name=gunicorn_app_name, remove=True)
                     continue
 
-                # Deploy
-                self._deploy_web(site)
+                # Python app will use Gunicorn+Gevent and Supervisor
+                if application:
+                    proxy_port = generate_random_port()
+                    default_gunicorn = {
+                        "workers": (multiprocessing.cpu_count() * 2) + 1,
+                        "threads": 4,
+                        "max-requests": GUNICORN_DEFAULT_MAX_REQUESTS,
+                        "worker-class": GUNICORN_DEFAULT_WORKER_CLASS
+                    }
+                    gunicorn_option.update(default_gunicorn)
+
+                    settings = " ".join(["--%s %s" % (x[0], x[1]) for x in gunicorn_option.items()])
+                    gunicorn_bin = get_venv_bin(bin_program="gunicorn", virtualenv=self.virtualenv.get("name"))
+
+                    # Site not under maintenance,
+                    # or is under maintenance but allow certain ips
+                    #  we'll activate the site
+                    if (not _maintenance["active"]) \
+                            or (_maintenance["active"] and _maintenance["allow_ips"]):
+                        command = "{GUNICORN_BIN} -b 0.0.0.0:{PROXY_PORT} {APP} {SETTINGS}"\
+                                  .format(GUNICORN_BIN=gunicorn_bin,
+                                          PROXY_PORT=proxy_port,
+                                          APP=application,
+                                          SETTINGS=settings,)
+
+                        Supervisor.start(name=gunicorn_app_name,
+                                         command=command,
+                                         directory=directory)
+                    else:
+                        Supervisor.stop(name=gunicorn_app_name, remove=True)
+
+                logs_dir = nginx.get("logs_dir", None)
+                if not logs_dir:
+                    logs_dir = "%s.logs" % self.directory
+                    if not os.path.isdir(logs_dir):
+                        os.makedirs(logs_dir)
+
+                with open(nginx_config_file, "wb") as f:
+                    context = dict(NAME=name,
+                                   SERVER_NAME=nginx.get("server_name", name),
+                                   DIRECTORY=directory,
+                                   PROXY_PORT=proxy_port,
+                                   PORT=nginx.get("port", NGINX_DEFAULT_PORT),
+                                   ROOT_DIR=nginx.get("root_dir", ""),
+                                   ALIASES=nginx.get("aliases", {}),
+                                   FORCE_NON_WWW=nginx.get("force_non_www", False),
+                                   FORCE_WWW=nginx.get("force_www", False),
+                                   SERVER_DIRECTIVES=nginx.get("server_directives", ""),
+                                   SSL_CERT=nginx.get("ssl_cert", ""),
+                                   SSL_KEY=nginx.get("ssl_key", ""),
+                                   SSL_DIRECTIVES=nginx.get("ssl_directives", ""),
+                                   LOGS_DIR=logs_dir,
+                                   MAINTENANCE={
+                                       "ACTIVE": _maintenance.get("active", False),
+                                       "PAGE": _maintenance.get("page", None),
+                                       "ALLOW_IPS": _maintenance.get("allow_ips", [])}
+                                   )
+                    content = Template(NGINX_CONFIG).render(**context)
+                    f.write(content)
             reload_server()
         else:
             raise TypeError("'web' is missing in deployapp.yml")
 
 
-    def _deploy_web(self, site):
+    def maintenance(self, is_on=True):
         """
-        Deploy
+        Will put all the sites under maintenance
+        To maintenance off, just deploy_web
         """
-        if "name" not in site:
-            raise TypeError("'name' is missing in sites config")
-        if "application" in site and not self.virtualenv.get("name"):
-            raise TypeError("'virtualenv' in required for web Python app")
+        if not is_on:
+            self.deploy_web()
+        else:
+            if "web" in self.config:
+                for site in self.config["web"]:
+                    if "name" not in site:
+                        raise TypeError("'name' is missing in sites config")
 
-        name = site["name"]
-        nginx = site["nginx"] if "nginx" in site else {}
-        gunicorn_option = site["gunicorn"] if "gunicorn" in site else {}
-        application = site["application"] if "application" in site else None
-        gunicorn_app_name = "gunicorn_%s" % (name.replace(".", "_"))
-        proxy_port = None
-        directory = self.directory
-        nginx_config_file = get_domain_conf_file(name)
+                    name = site["name"]
+                    nginx = site["nginx"] if "nginx" in site else {}
+                    directory = self.directory
+                    nginx_config_file = get_domain_conf_file(name)
+                    maintenance = {"active": False, "page": None, "allow_ips": []}
 
-        # Python app will use Gunicorn+Gevent and Supervisor
-        if application:
-            proxy_port = generate_random_port()
-            default_gunicorn = {
-                "workers": (multiprocessing.cpu_count() * 2) + 1,
-                "threads": 4,
-                "max-requests": GUNICORN_DEFAULT_MAX_REQUESTS,
-                "worker-class": GUNICORN_DEFAULT_WORKER_CLASS
-            }
-            gunicorn_option.update(default_gunicorn)
+                    with open(nginx_config_file, "wb") as f:
+                        context = dict(NAME=name,
+                                       SERVER_NAME=nginx.get("server_name", name),
+                                       DIRECTORY=directory,
+                                       PROXY_PORT=None,
+                                       PORT=nginx.get("port", NGINX_DEFAULT_PORT),
+                                       ROOT_DIR=nginx.get("root_dir", ""),
+                                       ALIASES=nginx.get("aliases", {}),
+                                       FORCE_NON_WWW=nginx.get("force_non_www", False),
+                                       FORCE_WWW=nginx.get("force_www", False),
+                                       SERVER_DIRECTIVES=nginx.get("server_directives", ""),
+                                       SSL_CERT=nginx.get("ssl_cert", ""),
+                                       SSL_KEY=nginx.get("ssl_key", ""),
+                                       SSL_DIRECTIVES=nginx.get("ssl_directives", ""),
+                                       MAINTENANCE={"ACTIVE": True,
+                                                    "PAGE": maintenance.get("page", None),
+                                                    "ALLOW_IPS": []}
+                                       )
+                        content = Template(NGINX_CONFIG).render(**context)
+                        f.write(content)
+                nginx_reload()
+            else:
+                raise TypeError("'web' is missing in deployapp.yml")
 
-            settings = " ".join(["--%s %s" % (x[0], x[1]) for x in gunicorn_option.items()])
-            gunicorn_bin = get_venv_bin(bin_program="gunicorn", virtualenv=self.virtualenv.get("name"))
-            command = "{GUNICORN_BIN} -b 0.0.0.0:{PROXY_PORT} {APP} {SETTINGS}"\
-                      .format(GUNICORN_BIN=gunicorn_bin,
-                              PROXY_PORT=proxy_port,
-                              APP=application,
-                              SETTINGS=settings,)
-
-            Supervisor.start(name=gunicorn_app_name,
-                             command=command,
-                             directory=directory)
-
-        logs_dir = nginx.get("logs_dir", None)
-        if not logs_dir:
-            logs_dir = "%s.logs" % self.directory
-            if not os.path.isdir(logs_dir):
-                os.makedirs(logs_dir)
-
-        with open(nginx_config_file, "wb") as f:
-            context = dict(NAME=name,
-                           SERVER_NAME=nginx.get("server_name", name),
-                           DIRECTORY=directory,
-                           PROXY_PORT=proxy_port,
-                           PORT=nginx.get("port", NGINX_DEFAULT_PORT),
-                           ROOT_DIR=nginx.get("root_dir", ""),
-                           ALIASES=nginx.get("aliases", {}),
-                           FORCE_NON_WWW=nginx.get("force_non_www", False),
-                           FORCE_WWW=nginx.get("force_www", False),
-                           SERVER_DIRECTIVES=nginx.get("server_directives", ""),
-                           SSL_CERT=nginx.get("ssl_cert", ""),
-                           SSL_KEY=nginx.get("ssl_key", ""),
-                           SSL_DIRECTIVES=nginx.get("ssl_directives", ""),
-                           LOGS_DIR=logs_dir
-                           )
-            content = Template(NGINX_CONFIG).render(**context)
-            f.write(content)
-
-
-    def maintenance(self):
-        """
-        To set a site on maintenance
-        """
-        pass
-
-    def run_scripts(self, script_name=None):
+    def run_scripts(self, name):
         """
         Run a one time script
         :params script_name: (string) The script name to run.
         """
-        script_key = "scripts"
-        if script_name:
-            script_key = "scripts_%s" % script_name
-        if script_key in self.config:
-            for script in self.config[script_key]:
+        if "scripts" in self.config and name in self.config["scripts"]:
+            for script in self.config["scripts"][name]:
                 if "command" not in script:
                     raise TypeError("'command' is missing in scripts")
 
@@ -627,6 +699,7 @@ class App(object):
                                  user=user,
                                  environment=environment)
 
+
     def install_requirements(self):
         requirements_file = self.directory + "/requirements.txt"
         if os.path.isfile(requirements_file):
@@ -651,24 +724,23 @@ def cmd():
 
         parser = argparse.ArgumentParser(description="%s %s" % (__NAME__, __version__))
         parser.add_argument("-w", "--websites", help="Deploy all sites", action="store_true")
-        parser.add_argument("--scripts", help="Execute Pre/Post scripts", action="store_true")
-        parser.add_argument("--name", help="To execute a specific script by name [--scripts --name $myname]")
-        parser.add_argument("--workers", help="Run Workers", action="store_true")
+        parser.add_argument("-s", "--scripts", help="Run script by specifying name:"
+                                                    " ie: [-s pre_web post_web other_one]", nargs='*')
+        parser.add_argument("-k", "--workers", help="Run Workers", action="store_true")
         parser.add_argument("--reload-server", help="To reload the servers", action="store_true")
 
-        parser.add_argument("--undeploy", help="To UNDEPLOY the application", action="store_true")
-        parser.add_argument("--maintenance", help="Values: on|off - To set the site on maintence. ie [--maintenance on]")
+        parser.add_argument("-x", "--undeploy", help="To UNDEPLOY the application", action="store_true")
+        parser.add_argument("-m", "--maintenance", help="Values: on|off - To set the site on maintenance. ie [--maintenance on]")
 
-        parser.add_argument("--on", help="The name of the repo.")
-        parser.add_argument("--git-init", help="Setup a bare repo git. [--on www --git-init]", action="store_true")
-        parser.add_argument("--git-push-web", help="To deploy web on each push. "
-                                                          "ie: --on www --git-push-web", action="store_true")
-        parser.add_argument("--git-push-cmd", help="Command to execute after git push. "
-                                                   "ie: [--on www --git-push-cmd 'ls  -l']")
-        parser.add_argument("--non-verbose", help="Disable verbosity", action="store_true")
+        parser.add_argument("--git-init", help="Setup a git bare repo $name to push content to. [--git-init $name]")
+        parser.add_argument("--git-push-web", help="Set deployapp to deploy automatically when "
+                                                   "push to the bare repo. [--git-push-web $name]")
+        parser.add_argument("--git-push-cmd", help="Setup Command to execute after git push. Put cmds within quotes"
+                                                   "ie: [--git-push-cmd $name 'ls  -l' 'cd ']", nargs='*')
+        parser.add_argument("--silent", help="Disable verbosity", action="store_true")
 
         arg = parser.parse_args()
-        VERBOSE = False if arg.non_verbose else True
+        VERBOSE = False if arg.silent else True
 
         _print("*" * 80)
         _print("%s %s" % (__NAME__, __version__))
@@ -676,42 +748,19 @@ def cmd():
 
         git = Git(CWD)
 
-        # Websites, scripts, workers may require a virtualenv
-        if arg.websites or arg.scripts or arg.workers:
+        # Maintenance
+        if arg.maintenance:
             app = App(CWD)
-            if app.virtualenv.get("name"):
-                _print("> SETUP VIRTUALENV: %s " % app.virtualenv.get("name"))
-                app.setup_virtualenv()
-
-                if app.virtualenv.get("directory"):
-                    VIRTUALENV_DIRECTORY = app.virtualenv.get("directory")
-
-                _print("> INSTALL REQUIREMENTS")
-                app.install_requirements()
-
-            if arg.websites:
-                _print(":: DEPLOY WEBSITES ::")
-
-                _print("> Running PRE-SCRIPTS ...")
-                app.run_scripts("pre_web")
-
-                _print("> Deploying WEB ... ")
-                app.deploy_web()
-
-                _print("> Running POST-SCRIPTS ...")
-                app.run_scripts("post_web")
-
-            if arg.scripts:
-                name = arg.name or None
-                _print("> Running SCRIPTS ...")
-                app.run_scripts(name)
-
-            if arg.workers:
-                _print("> Running WORKERS...")
-                app.run_workers()
+            maintenance = arg.maintenance.upper()
+            if maintenance == "ON":
+                _print(":: MAINTENANCE PAGE ON ::")
+                app.maintenance()
+            elif maintenance == "OFF":
+                _print(":: MAINTENANCE PAGE OFF ::")
+                arg.websites = True
 
         # Undeploy
-        elif arg.undeploy:
+        if arg.undeploy:
             _print(":: UNDEPLOY ::")
             app = App(CWD)
             app.deploy_web(undeploy=True)
@@ -719,41 +768,70 @@ def cmd():
             app.run_scripts("undeploy")
             app.destroy_virtualenv()
 
-        # Maintenance
-        elif arg.maintenance:
-            _maintenance = arg.maintenance.upper()
-            if _maintenance == "ON":
-                pass
-            elif _maintenance == "OFF":
-                pass
+        # Deploy: Websites, scripts, workers may require a virtualenv
+        elif arg.websites or arg.scripts or arg.workers:
+            app = App(CWD)
 
-        # Goodies
+            # Auto maintenance before doing any web deployment
+            if arg.websites:
+                app.maintenance()
+
+            # Virtualenv
+            if app.virtualenv.get("name"):
+                _print("> SETTING UP VIRTUALENV: %s ... " % app.virtualenv.get("name"))
+                app.setup_virtualenv()
+
+                if app.virtualenv.get("directory"):
+                    VIRTUALENV_DIRECTORY = app.virtualenv.get("directory")
+
+                _print("> INSTALLING REQUIREMENTS ...")
+                app.install_requirements()
+
+            # Web
+            if arg.websites:
+                _print(":: DEPLOY WEBSITES ::")
+
+                _print("> Running script pre_web ...")
+                app.run_scripts("pre_web")
+
+                _print("> Deploying WEB ... ")
+                app.deploy_web()
+
+                _print("> Running script post_web ...")
+                app.run_scripts("post_web")
+
+            # Scripts
+            if arg.scripts:
+                _print(":: RUN SCRIPTS ::")
+                for name in arg.scripts:
+                    _print("> Scripts: %s ..." % name)
+                    app.run_scripts(name)
+
+            # Workers
+            if arg.workers:
+                _print(":: RUN WORKERS ::")
+                app.run_workers()
+
+        # Extra
         else:
             if arg.git_init:
-                repo = arg.on
-                if not repo:
-                    raise ValueError("'--on $repo_name' is missing")
+                repo = arg.git_init
                 bare_repo = "%s/%s.git" % (CWD, repo)
-                _print("> Create Git Bare repo: %s" % bare_repo )
+                _print("> Creating Git Bare repo: %s ..." % bare_repo )
                 if git.init_bare_repo(repo):
                     git.update_post_receive_hook(repo, False)
 
             if arg.git_push_web:
-                repo = arg.on
-                if not repo:
-                    raise ValueError("'--on $repo_name' is missing")
+                repo = arg.git_push_web
                 cmd = "deployapp -w"
-                _print("> Set WEB auto deploy on git push")
+                _print("> Setting WEB auto deploy on git push ...")
                 git.update_post_receive_hook(repo, cmd)
 
             if arg.git_push_cmd:
-                repo = arg.on
-                if not repo:
-                    raise ValueError("'--on $repo_name' is missing")
-
-                cmd = arg.git_push_cmd
-                _print("> Set custom CMD on git push")
-                git.update_post_receive_hook(repo, cmd)
+                repo = arg.git_push_cmd[0]
+                cmds = "; ".join(arg.git_push_cmd[1:])
+                _print("> Setting custom CMD on git push ...")
+                git.update_post_receive_hook(repo, cmds)
 
             if arg.reload_server:
                 _print("> Reloading server ...")
@@ -772,21 +850,11 @@ def setup_deployapp():
     """
     To setup necessary paths and commands
     """
-    print("SETUP DEPLOYAPP ...")
+    global VERBOSE
 
-    conf_file = "/etc/supervisord.conf"
-    init_d = "/etc/init.d/supervisord"
+    VERBOSE = True
 
-    if not os.path.isdir(SUPERVISOR_CONF_DIR):
-        os.makedirs(SUPERVISOR_CONF_DIR)
-    if not os.path.isdir(SUPERVISOR_LOG_DIR):
-        os.makedirs(SUPERVISOR_LOG_DIR)
-
-    run("echo_supervisord_conf > %s" % conf_file)
-    with open(conf_file, "a") as f:
-        lines = "\n[include]\n"
-        lines += "files = " + SUPERVISOR_CONF_DIR + "/*.conf\n"
-        f.write(lines)
+    _print("SETUP DEPLOYAPP ...")
 
     INIT_FILE = """
 #!/bin/sh
@@ -833,8 +901,95 @@ case "$1" in
   ;;
 esac
 """
+
+    MAINTENANCE_PAGE = """
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+    <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+    <title>Site Maintenance</title>
+    <link href='//fonts.googleapis.com/css?family=Raleway:400,300,600' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    <style type="text/css">
+      body { font: 20px "Raleway", Helvetica, sans-serif; color: #666; text-align: center; padding-top: 150px;}
+        h1 { font-size: 50px; color: #333; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12 maintenance">
+                <h1>We'll be back soon!</h1>
+                <div>
+                   Sorry for the inconvenience but we're performing some maintenance at the moment. <br>
+                    We'll be back online shortly. <br>
+                    Thanks!
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+    """
+
+    _dist = get_dist()
+    _yum = get_dist_config("YUM")
+    conf_file = "/etc/supervisord.conf"
+    init_d = "/etc/init.d/supervisord"
+    var_deployapp_dir = "/var/deployapp"
+    maintenance_page = "%s/maintenance.html" % var_deployapp_dir
+    install_pkgs = ["nginx"]
+    upstarts = ["nginx", "supervisord"]
+
+    if not os.path.isdir(SUPERVISOR_CONF_DIR):
+        os.makedirs(SUPERVISOR_CONF_DIR)
+    if not os.path.isdir(SUPERVISOR_LOG_DIR):
+        os.makedirs(SUPERVISOR_LOG_DIR)
+    if not os.path.isdir(var_deployapp_dir):
+        os.makedirs(var_deployapp_dir)
+
+    if _dist == "RHEL":
+        install_pkgs.extend(['groupinstall "Development Tools"', "python-devel", "php-fpm"])
+    elif _dist == "DEBIAN":
+        install_pkgs.extend(["clamav*", "python-dev", "php5-fpm"])
+    run("%s -y install %s" % (_yum, " ".join(install_pkgs)))
+
+    run("echo_supervisord_conf > %s" % conf_file)
+    with open(conf_file, "a") as f:
+        lines = "\n[include]\n"
+        lines += "files = " + SUPERVISOR_CONF_DIR + "/*.conf\n"
+        f.write(lines)
+
     with open(init_d, "wb") as f:
         f.write(INIT_FILE)
     run("chmod +x %s" % init_d)
-    run("chkconfig supervisord on")
+
+    with open(maintenance_page, "wb") as f:
+        f.write(MAINTENANCE_PAGE)
+
+    # Load service on start of system
+    if _dist == "RHEL":
+        upstarts.append("php-fpm")
+        for _ in upstarts:
+            run("chkconfig %s on" % _)
+    elif _dist == "DEBIAN":
+        for _ in upstarts:
+            upstarts.append("php5-fpm")
+            run("update-rc.d %s defaults" % _)
+    for _ in upstarts:
+        run("service %s reload" % _)
+
+    # Add the virtualenvwrapper in bashrc
+    grep_test = 'if grep -q "#DEPLOYAPP-VIRTUALENVWRAPPER-START" ~/.bashrc; then echo "yes"; else echo "no"; fi'
+    bash_venv = 'echo "\n#DEPLOYAPP-VIRTUALENVWRAPPER-START\n' \
+                'export VIRTUALENVWRAPPER_PYTHON={PY_EXECUTABLE}\n' \
+                'export WORKON_HOME=~/.virtualenvs\n' \
+                'source /usr/local/bin/virtualenvwrapper.sh\n' \
+                '#DEPLOYAPP-VIRTUALENVWRAPPER-END\n' \
+                '" >> ~/.bashrc && source ~/.bashrc'.format(PY_EXECUTABLE=PY_EXECUTABLE)
+    if run(grep_test, False) != "yes":
+        run(bash_venv)
+
     print("Done!")
+
+
