@@ -1,0 +1,9 @@
+
+
+virtualenv:
+  name: "mysitename.com"
+
+web:
+  -
+    name: "mysitename.com"
+    application: "app:app"
