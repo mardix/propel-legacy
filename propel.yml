@@ -72,7 +72,7 @@ scripts:
       command: ""
     -
       directory: ""
-      command: "$PTHON myscript.py"
+      command: "$PYTHON_ENV myscript.py"
 
 
   # UNDEPLOY: Will run this script when UNDEPLOYING
@@ -81,7 +81,7 @@ scripts:
       command: ""
     -
       directory: ""
-      command: "$PTHON myscript.py"
+      command: "$PYTHON_ENV myscript.py"
 
 
   # MY_SCRIPT_NAME: Custom script by name
@@ -90,18 +90,18 @@ scripts:
       command: ""
     -
       directory: ""
-      command: "$PTHON myscript.py"
+      command: "$PYTHON_ENV myscript.py"
 
 
 # WORKERS: Run custom script or app in the background using supervisor
 workers:
   -
     name: "myworker1"
-    command: "$PYTHON myyworker1.py
+    command: "$PYTHON_ENV myyworker1.py
   -
     name: "myworker2"
     directory: ""
-    command: "$PYTHON myyworker2.py"
+    command: "$PYTHON_ENV myyworker2.py"
     user: ""
     exclude: True  # Prevent this worker from rerunning
 
