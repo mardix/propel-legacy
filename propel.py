@@ -35,8 +35,6 @@ import argparse
 import shutil
 import platform
 import getpass
-import fcntl
-import struct
 
 try:
     import yaml
@@ -47,7 +45,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.22.2"
+__version__ = "0.22.3"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Propel"
@@ -846,19 +844,20 @@ def cmd():
             if arg.reload_server:
                 _print("> Reloading server ...")
                 reload_server()
-
+        _print("Completed!")
         _print("")
-        _print("-" * 80)
-        _print("*Propel completed!")
 
         if app:
+            _print("-" * 80)
+            _print("* Propel Summary *")
+            _print("")
             if app.virtualenv.get("name"):
                 _print("Virtualenv: %s" % app.virtualenv.get("name"))
             if arg.websites:
                 if app.web_name:
                     _print("Webapp: %s" % app.web_name)
                     if app.proxy_port:
-                        _print("Gunicorn port: %s" % app.web_name)
+                        _print("Gunicorn port: %s" % app.proxy_port)
             if app.supervisor_process_name:
                 _print("Supervisor process name: %s" % app.supervisor_process_name)
 
