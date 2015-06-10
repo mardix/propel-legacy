@@ -10,6 +10,53 @@ on a single server, run scripts and background workers.
 The main reason, was to deploy multiple Flask apps on a single DigitalOcean VM
  effortlessly. The other reason, was to make it easy to deploy applications. 
  
+---
+
+##TLDR; Install and run Propel (simple Flask example)
+
+1. On the server you intend to run your applications, install Propel 
+by running the following commands:
+
+         pip install propel
+        
+         propel-setup
+    
+    
+1. CD in the directory that contains your app, and create the following files:
+
+    -app.py 
+    
+        from flask import Flask
+        
+        app = Flask(__name__)
+        
+        @app.route("/")
+        def index():
+            return "Hello Propel!"
+    
+    -requirements.txt
+    
+        Flask
+    
+    -propel.yml
+    
+        virtualenv:
+          name: "mysitename.com"
+        
+        web:
+          -
+            name: "mysitename.com"
+            application: "app:app"
+            
+1. Inside of your app directory run:
+
+        propel -w
+    
+1. Now go to `http://mysitename.com`
+    
+1. Profit! (or your money back)
+
+--- 
  
 ### Features
 
@@ -65,54 +112,6 @@ Requirements:
 
 	- git (not really required, but good to have)
     
----
-
-##TLDR; Install and run Propel (simple Flask example)
-
-1. On the server you intend to run your applications, install Propel 
-by running the following commands:
-
-         pip install propel
-        
-         propel-setup
-    
-    
-1. CD in the directory that contains your app, and create the following files:
-
-    -app.py 
-    
-        from flask import Flask
-        
-        app = Flask(__name__)
-        
-        @app.route("/")
-        def index():
-            return "Hello Propel!"
-    
-    -requirements.txt
-    
-        Flask
-    
-    -propel.yml
-    
-        virtualenv:
-          name: "mysitename.com"
-        
-        web:
-          -
-            name: "mysitename.com"
-            application: "app:app"
-            
-1. Inside of your app directory run:
-
-        propel -w
-    
-1. Now go to `http://mysitename.com`
-    
-1. Profit! (or your money back)
-
----
-
 ---
 
 
