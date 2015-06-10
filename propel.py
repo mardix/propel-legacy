@@ -44,7 +44,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.22"
+__version__ = "0.22.1"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Propel"
@@ -72,36 +72,20 @@ DIST_CONF = {
     "RHEL": {
         "NGINX_CONF_FILE": "/etc/nginx/conf.d/%s.conf",
         "APT_GET": "yum",
-        "NGINX_SERVICE": "nginx",
-        "PHPFPM_SERVICE": "php-fpm",
-        "INSTALL": [
-            "nginx",
-            'groupinstall "Development Tools"',
-            "python-devel",
-            "php-fpm"],
-        "UPSTART": [
-            "nginx",
-            "supervisord",
-            "php-fpm"
-        ],
-        "UPDATE_RCD": "chkconfig %s on"
+        "INSTALL_PROGRAMS": ["nginx", 'groupinstall "Development Tools"', "python-devel", "php-fpm"],
+        "SETUP_CMD": ["sudo supervisord", "sudo service nginx start", "sudo service php-fpm"],
+        "UPSTART_PROGRAMS": ["nginx", "supervisord", "php-fpm" ],
+        "UPSTART_CMD": "chkconfig %s on"      
     },
     "DEBIAN": {
         "NGINX_CONF_FILE": "/etc/nginx/sites-enabled/%s.conf",
         "APT_GET": "apt-get",
-        "NGINX_SERVICE": "nginx",
-        "PHPFPM_SERVICE": "php5-fpm",
-        "INSTALL":[
-            "nginx",
-            'python-dev',
-            "php5-fpm"
-        ],
-        "UPSTART": [
-            "nginx",
-            "supervisord",
-            "php5-fpm"
-        ],
-        "UPDATE_RCD": "update-rc.d %s defaults"
+        "RELOAD_CMD": ["nginx", "php5-fpm"],
+        "INSTALL_PROGRAMS":["nginx", 'python-dev', "php5-fpm"],
+        "UPSTART_PROGRAMS": ["nginx", "supervisord", "php5-fpm"],
+        "SETUP_CMD": ["sudo supervisord", "sudo service nginx start", "sudo service php5-fpm"],
+        "UPSTART_CMD": "update-rc.d %s defaults"
+        
     }
 }
 
@@ -340,15 +324,6 @@ def generate_random_port():
         if not is_port_open(port):
             return port
 
-def get_dist_config(key):
-    """
-    Return the
-    """
-    dist = get_dist()
-    if dist in DIST_CONF:
-        return DIST_CONF[dist].get(key)
-    raise AttributeError("Dist config '%s' not found" % key)
-
 def get_dist():
     """
     Return the running distribution group
@@ -364,9 +339,18 @@ def get_dist():
         return "DEBIAN"
     raise NotImplemented("Platform '%s' is not compatible with Propel" % dist_name)
 
+def get_dist_config(key):
+    """
+    Return the
+    """
+    dist = get_dist()
+    if dist in DIST_CONF:
+        return DIST_CONF[dist].get(key)
+    raise AttributeError("Dist config '%s' not found" % key)
+
 def nginx_reload():
-    run("service %s reload" % get_dist_config("NGINX_SERVICE"))
-    run("service %s reload" % get_dist_config("PHPFPM_SERVICE"))
+    for svc in get_dist_config("RELOAD_CMD"):
+        run("sudo service %s reload" % svc)
 
 def get_domain_conf_file(domain):
     return get_dist_config("NGINX_CONF_FILE") % domain
@@ -949,9 +933,6 @@ esac
     """
 
     _apt_get = get_dist_config("APT_GET")
-    installs = get_dist_config("INSTALL")
-    upstarts = get_dist_config("UPSTART")
-    update_rcd = get_dist_config("UPDATE_RCD")
 
     conf_file = "/etc/supervisord.conf"
     init_d = "/etc/init.d/supervisord"
@@ -965,12 +946,11 @@ esac
     if not os.path.isdir(var_propel_dir):
         os.makedirs(var_propel_dir)
 
-    # update system
     run("sudo %s -y update" % _apt_get)
 
-    if installs:
-        run("sudo %s -y install %s" % (_apt_get, " ".join(installs)))
-
+    install_programs = get_dist_config("INSTALL_PROGRAMS")
+    run("sudo %s -y install %s" % (_apt_get, " ".join(install_programs)))
+    
     run("echo_supervisord_conf > %s" % conf_file)
     with open(conf_file, "a") as f:
         lines = "\n[include]\n"
@@ -981,12 +961,8 @@ esac
         f.write(INIT_FILE)
     run("chmod +x %s" % init_d)
 
-    with open(maintenance_page, "wb") as f:
-        f.write(MAINTENANCE_PAGE)
-
-    run("mkdir -p ~/.virtualenvs")
-
     # Add the virtualenvwrapper in bashrc
+    run("mkdir -p ~/.virtualenvs")
     grep_test = 'if grep -q "#PROPEL-VIRTUALENVWRAPPER-START" ~/.bashrc; then echo "yes"; else echo "no"; fi'
     bash_venv = 'echo "\n#PROPEL-VIRTUALENVWRAPPER-START\n' \
                 'export VIRTUALENVWRAPPER_PYTHON={PY_EXECUTABLE}\n' \
@@ -997,10 +973,15 @@ esac
     if run(grep_test, False) != "yes":
         run(bash_venv)
 
-    # Load service on start of system
-    for _ in upstarts:
-        run(update_rcd % _)
-        run("service %s reload" % _)
+    upstart_cmd = get_dist_config("UPSTART_CMD")
+    for _ in get_dist_config("UPSTART_PROGRAMS"):
+        run(upstart_cmd % _)
+
+    for _ in get_dist_config("SETUP_CMD"):
+        run(_)
+
+    with open(maintenance_page, "wb") as f:
+        f.write(MAINTENANCE_PAGE)
 
     print("\nPropel setup completed!")
 
