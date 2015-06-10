@@ -35,6 +35,9 @@ import argparse
 import shutil
 import platform
 import getpass
+import fcntl
+import struct
+
 try:
     import yaml
 except ImportError as ex:
@@ -44,7 +47,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.22.1"
+__version__ = "0.22.2"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Propel"
@@ -498,6 +501,9 @@ class Git(object):
 class App(object):
     virtualenv = None
     directory = None
+    proxy_port = None
+    web_name = None
+    supervisor_process_name = None
 
     def __init__(self, directory):
         self.config = get_deploy_config(directory)
@@ -524,11 +530,11 @@ class App(object):
                     raise TypeError("'virtualenv' in required for web Python app")
 
                 name = site["name"]
+                self.web_name = name
                 nginx = site["nginx"] if "nginx" in site else {}
                 gunicorn_option = site["gunicorn"] if "gunicorn" in site else {}
                 application = site["application"] if "application" in site else None
                 gunicorn_app_name = "gunicorn_%s" % (name.replace(".", "_"))
-                proxy_port = None
                 remove = True if "remove" in site and site["remove"] is True else False
                 directory = self.directory
                 nginx_config_file = get_domain_conf_file(name)
@@ -542,7 +548,8 @@ class App(object):
 
                 # Python app will use Gunicorn+Gevent and Supervisor
                 if application:
-                    proxy_port = generate_random_port()
+                    self.supervisor_process_name = gunicorn_app_name
+                    self.proxy_port = generate_random_port()
                     default_gunicorn = {
                         "workers": (multiprocessing.cpu_count() * 2) + 1,
                         "threads": 4,
@@ -561,7 +568,7 @@ class App(object):
                             or (_maintenance["active"] and _maintenance["allow_ips"]):
                         command = "{GUNICORN_BIN} -b 0.0.0.0:{PROXY_PORT} {APP} {SETTINGS}"\
                                   .format(GUNICORN_BIN=gunicorn_bin,
-                                          PROXY_PORT=proxy_port,
+                                          PROXY_PORT=self.proxy_port,
                                           APP=application,
                                           SETTINGS=settings,)
 
@@ -581,7 +588,7 @@ class App(object):
                     context = dict(NAME=name,
                                    SERVER_NAME=nginx.get("server_name", name),
                                    DIRECTORY=directory,
-                                   PROXY_PORT=proxy_port,
+                                   PROXY_PORT=self.proxy_port,
                                    PORT=nginx.get("port", NGINX_DEFAULT_PORT),
                                    ROOT_DIR=nginx.get("root_dir", ""),
                                    ALIASES=nginx.get("aliases", {}),
@@ -749,6 +756,7 @@ def cmd():
         _print("")
 
         git = Git(CWD)
+        app = None
 
         # Maintenance
         if arg.maintenance:
@@ -838,10 +846,28 @@ def cmd():
             if arg.reload_server:
                 _print("> Reloading server ...")
                 reload_server()
+
+        _print("")
+        _print("-" * 80)
+        _print("*Propel completed!")
+
+        if app:
+            if app.virtualenv.get("name"):
+                _print("Virtualenv: %s" % app.virtualenv.get("name"))
+            if arg.websites:
+                if app.web_name:
+                    _print("Webapp: %s" % app.web_name)
+                    if app.proxy_port:
+                        _print("Gunicorn port: %s" % app.web_name)
+            if app.supervisor_process_name:
+                _print("Supervisor process name: %s" % app.supervisor_process_name)
+
     except Exception as ex:
-        _print("ERROR: %s " % ex.__repr__())
-    _print("Done!\n")
-    
+        _print("Propel ERROR: %s " % ex.__repr__())
+
+    _print("")
+
+
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------

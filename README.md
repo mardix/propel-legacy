@@ -72,8 +72,9 @@ Requirements:
 1. On the server you intend to run your applications, install Propel 
 by running the following commands:
 
-    > pip install propel
-    > propel-setup
+         pip install propel
+        
+         propel-setup
     
     
 1. CD in the directory that contains your app, and create the following files:
@@ -106,6 +107,7 @@ by running the following commands:
 
         propel -w
     
+1. Now go to `http://mysitename.com`
     
 1. Profit! (or your money back)
 
