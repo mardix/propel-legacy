@@ -1,34 +1,47 @@
-# Deployapp
+# Propel
 
-### About
-
-Deployapp is a script that allows you to deploy multiple Python/PHP/HTML sites 
+## About
+ 
+Propel allows you to deploy multiple Python/PHP/HTML apps (sites) 
 on a single server, run scripts and background workers.
 
+#### - Why did I create Propel ?
+
+The main reason, was to deploy multiple Flask apps on a single DigitalOcean VM
+ effortlessly. The other reason, was to make it easy to deploy applications. 
+ 
+ 
+### Features
+
 #### Deploy Python
-Deployapp allows you deploy multiple Python sites/applications (Flask, Django)
+
+Propel allows you deploy multiple Python sites/applications (Flask, Django)
 by isolating each app into its own virtualenv, using Virtualenvwrapper, then 
-puts it online using Gunicon+Gevent under Supervisor, to make sure it's alway up. 
+puts it online using Gunicon+Gevent under Supervisor, to make sure it's always up. 
 Then uses NGinx as proxy to access the sites.
 
-#### Deploy PHP/HTML
-Deployapp is not limited to only Python app, it can deploy PHP/HTML sites too 
+#### - Deploy PHP/HTML
+
+Propel is not limited to only Python app, it can deploy PHP/HTML sites too 
 using PHP-FPM.
 
-#### Script and Workers
-Besides deploying sites/apps. Deployapp can run scripts before and after deployment.
+#### - Script and Workers
+
+Besides deploying sites/apps. Propel can run scripts before and after deployment.
 Run other scripts individually. And background running scripts (workers) with Supervisor. 
 
-#### Maintenance mode
-Deployapp also has a maintenance mode that will display a maintenance page when the 
+#### - Maintenance mode
+
+Propel also has a maintenance mode that will display a maintenance page when the 
 website is down for maintenance or is being deployed.
 
 
-West Side Story: I created this package because I wanted to deploy multiple isolated Flask sites on a single DigitalOcean instance. 
-And I wanted something that automates the deployment process of my sites, while sipping on some Caramel Iced Coffee :) 
 
 
-Deployapp makes use of the following packages:
+
+#### - Packages 
+
+Propel makes use of the following packages:
 
     - Gunicorn
 
@@ -42,28 +55,27 @@ Deployapp makes use of the following packages:
     
     - Jinja2
     
+(They will be installed automatically, so no need to do it manually)
 
 Requirements:
 
     - Nginx
 
-    - php-fpm (optional if running PHP/HTML site)
+    - php-fpm
 
 	- git (not really required, but good to have)
-
-
     
 ---
 
 
 ## Install & Setup
 
-	pip install deployapp
+	pip install propel
 
-After installing *deployapp* for the first time, run the following command to setup 
-Supervisor conf and logs directories compatible to deployapp.
+After installing *propel* for the first time, run the following command to setup 
+Supervisor conf and logs directories compatible to propel.
 
-    deployapp-setup
+    propel-setup
 
 
 ** You may need root admin
@@ -76,10 +88,10 @@ Once done, you should be good to go.
 
 ## How to use
 
-**Deployapp** works in the current working directory (CWD). You must have the file
-`deployapp.yml` in order for it to execute properly.
+**Propel** works in the current working directory (CWD). You must have the file
+`propel.yml` in order for it to execute properly.
 
-So you must `cd` into the directory that contains your `deployapp.yml`
+So you must `cd` into the directory that contains your `propel.yml`
 
 Let's say my application is at: `/home/myapp.com/www`
 
@@ -87,52 +99,52 @@ Let's say my application is at: `/home/myapp.com/www`
 	
 From there you can run the commands below:
 
-#### deployapp -w | --websites
+#### propel -w | --websites
 
 To deploy websites. It will also run scripts_pre_web and scripts_post_web
 
-    deployapp -w
+    propel -w
 
 
     
-### deployapp -s | --scripts [name, [names ...]]
+### propel -s | --scripts [name, [names ...]]
 
 To run a custom script
 
-    deployapp --scripts my_script_name
+    propel --scripts my_script_name
     
 Run multiple scripts
 
-    deployapp --scripts my_script_name another_script a_third_script
+    propel --scripts my_script_name another_script a_third_script
     
     
-#### deployapp -k | --workers
+#### propel -k | --workers
 
 To run workers in the background using Supervisor
 
-    deployapp --workers
+    propel --workers
 
 
-### deployapp -x | --undeploy
+### propel -x | --undeploy
 
 To undeploy all. It will remove sites, scripts, workers, and destroy the virtualenv
 
-    deployapp --undeploy
+    propel --undeploy
 
 
-### deployapp -m | --maintenance on|off
+### propel -m | --maintenance on|off
 
 To activate/deactivate the site maintenance page
 
-    deployapp --maintenance on
+    propel --maintenance on
     
-    deployapp --maintenance off
+    propel --maintenance off
 
 ---
 
-# deployapp.yml
+# propel.yml
 
-`deployapp.yml` is a config file that tells deployapp what to deploy and run.
+`propel.yml` is a config file that tells propel what to deploy and run.
 
 ### How does it work ?
 
@@ -155,7 +167,7 @@ To activate/deactivate the site maintenance page
             
 **For Python application/sites, `virtualenv` is required. The requirements.txt must also exist to install the necessary packages.  
 
-Upon deploying a Python app, Deployapp will the following:
+Upon deploying a Python app, Propel will the following:
 
 - Instantly set the site on maintenance mode. So when a visitor comes, the will a maintenance page 
 
@@ -351,7 +363,7 @@ The maintenance config allows you to set page to show and turn on/off automatica
 
 - active: (bool) Turn on/off maintenance page
 
-- page: (path) The maintenance page. If it doesn't exist, it will fallback to the deployapp default one
+- page: (path) The maintenance page. If it doesn't exist, it will fallback to the propel default one
 
 - allowed_ips: (list) List of ips to allow. When allowed_ips is available, it will allow the ips to 
 access the site, but show the maintenance page to all others. 
@@ -361,7 +373,7 @@ access the site, but show the maintenance page to all others.
 
 ## SCRIPTS
 
-Deployapp allows you to run scripts. Scripts can be run as is, or before and after deployment:
+Propel allows you to run scripts. Scripts can be run as is, or before and after deployment:
 
 Scripts is a dict of with script name to execute. A script can contain multiple commands 
 
@@ -412,31 +424,31 @@ Each command must have the `command` param, and optionally `directory` if the sc
           
 And to run any of these scripts, you can just do:
 
-    deployapp -s my_script_name
+    propel -s my_script_name
     
 or multiple scripts:
     
-    deployapp -s my_script_name another_script 
+    propel -s my_script_name another_script 
     
     
-#### Scripts command with variables: $PYTHON and $LOCAL_BIN
+#### Scripts command with variables: $PYTHON_ENV and $LOCAL_BIN
 
 As a convenience, there are a few variables to refer to the virtualenv. They allow you to refer to the location without knowing the full path, specially when in virtualenv.
 
-- $PYTHON: refers to the Python (ie: /root/.virtualenvs/myvirtualenv/local/bin/python2.7)
+- $PYTHON_ENV: refers to the Python (ie: /root/.virtualenvs/myvirtualenv/local/bin/python2.7)
 
 - $LOCAL_BIN: refers to the local bin like (ie: /root/.virtualenvs/myvirtualenv/local/bin/)
 
 - $CWD: refers to the current working directory
 
         -
-          command: "$PYTHON manage.py"
+          command: "$PYTHON_ENV manage.py"
 
 The command above will execute the manage.py with the virtualenv python.
 
 **Config description**
 
-- command: (string) (required) the command to use. You can the $PYTHON and $LOCAL_BIN variables in it.
+- command: (string) (required) the command to use. You can the $PYTHON_ENV and $LOCAL_BIN variables in it.
 
 - directory: (string) The directory the command is being executed at. If empty, it will be executed in the current working directory
 
@@ -450,17 +462,17 @@ The command above will execute the manage.py with the virtualenv python.
     scripts:
         pre_web:
           -
-            command: "$PYTHON myscript.py"
+            command: "$PYTHON_ENV myscript.py"
         
         post_web:
           -
-            command: "$PTHON another-script.py"
+            command: "$PYTHON_ENV another-script.py"
         
 
 #### UNDEPLOY
 
 `undeploy` will run when undeploying the application. It can be used to clean up etc when removing the site.
-ie: `deployapp --undeploy`
+ie: `propel --undeploy`
 
     scripts:
       undeploy:
@@ -473,7 +485,7 @@ ie: `deployapp --undeploy`
 You can setup your custom scripts to be run manually.
 
 `$script_name` (with $script_name being the name of the script). It will be run when called manually. 
-ie: `deployapp -s setup_cron`
+ie: `propel -s setup_cron`
 
     scripts:
       setup_cron:
@@ -494,11 +506,11 @@ Workers are scripts that are run continuously in the background and are monitore
     workers:
       - 
         name: "myworkername"
-        command: "$PYTHON myworker.py"
+        command: "$PYTHON_ENV myworker.py"
       -
         name: "anotherworker"
         directory: ""
-        command: "$PYTHONX myotherworker.py"
+        command: "$PYTHON_ENV myotherworker.py"
         user: "www-data"
         environement: ""
         exclude: True 
@@ -508,7 +520,7 @@ Workers are scripts that are run continuously in the background and are monitore
 
 - name: (string) (required) The name of the worker
 
-- command: (string) (required) the command to use. You can the $PYTHON and $LOCAL_BIN variables in it.
+- command: (string) (required) the command to use. You can the $PYTHON_ENV and $LOCAL_BIN variables in it.
 
 - directory: (string) The directory the command is being executed at. If empty, it will be executed in the current working directory
 
@@ -524,34 +536,34 @@ Workers are scripts that are run continuously in the background and are monitore
 
 ## MAINTENANCE
 
-Deployapp allows you to set your site on Maintenance mode. When visitors come to the site, they will be
+Propel allows you to set your site on Maintenance mode. When visitors come to the site, they will be
 greeted with a maintenance page to tell them the site is under maintenance. 
 
 To manually set the site under maintenance
 
-    deployapp --maintenance on 
+    propel --maintenance on 
     
     // or 
     
-    deployapp -m on
+    propel -m on
     
 And to remove it
 
-    deployapp --maintenance off
+    propel --maintenance off
     
     // or 
     
-    deployapp -m off
+    propel -m off
 
-Deployapp already has a default page that it will render upon being under maintenance.
+Propel already has a default page that it will render upon being under maintenance.
 
 
-#### Set the maintenance in deployapp.yml
+#### Set the maintenance in propel.yml
 
-You can also set the maintenance mode in the `deployapp.yml`. This way it will turn on/off maintenance each time 
-you run `deployapp -w`
+You can also set the maintenance mode in the `propel.yml`. This way it will turn on/off maintenance each time 
+you run `propel -w`
 
-Edit your `deployapp.yml` and add the line below.
+Edit your `propel.yml` and add the line below.
 
     maintenance:
       active: True 
@@ -573,7 +585,7 @@ So if your site is at: /home/mysite.com, the maintenance page is at: /home/mysit
 Sometimes, even if the site is under maintenance, you would like to check everything on it to make sure it works 
 before activate it back again; or you would want to give certain people access before going live.
 
-To do so, Deployapp allows to set a list of ips you would like to give access while the site is under maintenance
+To do so, Propel allows to set a list of ips you would like to give access while the site is under maintenance
 
     maintenance:
       active: True
@@ -588,8 +600,8 @@ To deactivate and put the full site back online
     maintenance:
       active: False
 
-If the site is under maintenance using deployapp.yml, `deployapp -m off` will not turn off maintenance. 
-You must deactivate it in deployapp.yml
+If the site is under maintenance using propel.yml, `propel -m off` will not turn off maintenance. 
+You must deactivate it in propel.yml
 
 
 ---
@@ -599,13 +611,13 @@ You must deactivate it in deployapp.yml
 ## Some Xtra
 
  
-### deployapp --git-init $repo_name 
+### propel --git-init $repo_name 
 
 To create a `git bare repo` directory to push content to with `git push`
 
     cd /home/mydomain.com
     
-    deployapp --git-init www
+    propel --git-init www
     
 
 It will create 3 directories:
@@ -625,22 +637,22 @@ So your git path to push directly could be:
 And when you `git push` it will update the `/home/mydomain/www` directory
 
 
-### deployapp --git-push-web $repo_name 
+### propel --git-push-web $repo_name 
 
-It will add the command `deployapp -w` in the *post-receive* hook file so it redeploy the app on each push. Good for Python app. 
+It will add the command `propel -w` in the *post-receive* hook file so it redeploy the app on each push. Good for Python app. 
 
     cd /home/mydomain.com
     
-    deployapp --git-push-web www
+    propel --git-push-web www
     
     
-### deployapp --git-push-cmd $repo_name  [cmd, [cmd...]]
+### propel --git-push-cmd $repo_name  [cmd, [cmd...]]
     
 To add custom command to be executed after a git push
 
     cd /home/mydomain.com
     
-    deployapp --git-push-cmd www 'ls -l' 'cd /' ''
+    propel --git-push-cmd www 'ls -l' 'cd /' ''
 
 
 ---

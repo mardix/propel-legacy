@@ -1,11 +1,11 @@
 """
-deployapp
+propel
 """
 
 from setuptools import setup
-import deployapp
+import propel
 
-PACKAGE = deployapp
+PACKAGE = propel
 
 setup(
     name=PACKAGE.__NAME__,
@@ -15,18 +15,18 @@ setup(
     author_email='mardix@github.com',
     description="A package to deploy sites in virtualenv, run scripts, and deploy workers with supervisor",
     long_description=PACKAGE.__doc__,
-    url='http://github.com/mardix/deployapp/',
-    download_url='http://github.com/mardix/deployapp/tarball/master',
-    py_modules=['deployapp'],
-    entry_points=dict(console_scripts=['deployapp=deployapp:cmd',
-                                       'deployapp-setup=deployapp:setup_deployapp']),
+    url='http://github.com/mardix/propel/',
+    download_url='http://github.com/mardix/propel/tarball/master',
+    py_modules=['propel'],
+    entry_points=dict(console_scripts=['propel=propel:cmd',
+                                       'propel-setup=propel:setup_propel']),
     install_requires=[
-        'jinja2',
-        'pyyaml',
-        'supervisor',
-        'virtualenvwrapper'
+        'jinja2==2.7.3',
+        'pyyaml==3.11',
+        'virtualenvwrapper==4.5.1',
+        'supervisor'
     ],
-    keywords=['deploy', 'flask', 'gunicorn', 'django', 'workers', 'deploy sites'],
+    keywords=['deploy', 'flask', 'gunicorn', 'django', 'workers', 'deploy sites', 'deployapp'],
     platforms='any',
     classifiers=[
         'Environment :: Web Environment',

@@ -1,7 +1,14 @@
+- 0.22.0
+    - bump version
+
+- 0.21.0
+    - rename 'deployapp' to 'propel'
+    - rename $PYTHON to $PYTHON_ENV
+
 - 0.20.0
 
     - Add maintenance page
-    - Added more setup config in deployapp-setup
+    - Added more setup config in propel-setup
         - install nginx
         - install php-fpm
         - setup virtualenvwrapper

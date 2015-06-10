@@ -1,0 +1,118 @@
+
+# Propel
+# Config file
+# propel -w
+
+---
+# Virtualenv
+virtualenv:
+  name: ""  # The name of the virtualenv. Required for python web/workers
+  directory: "" # The directory of the virtualenvs, by default it's /root/.virtualenvs
+  rebuild: ""  # (bool) To rebuild
+
+# WEB: list of dict of web sites/application to deploy
+web:
+  -
+
+    name: "mysite.com" # The site name
+    application: "run_mysite:flask_app" # for python application
+
+    # Nginx related config
+    nginx:
+      port: 80
+      server_name: "mysite.com" # Optional if the server name is different than name, or has multiple server_name
+      logs_dir: ""
+      root_dir: ""
+      aliases:
+        "/static": "mysite/static"
+      force_non_www: True
+      force_www: False
+      server_directives: ""
+      ssl_directives: ""
+      ssl_cert: ""
+      ssl_key: ""
+
+
+    # Gunicorn option (Optional. Python only)
+    gunicorn:
+      workers: 4
+      threads: 8
+
+    # To remove the site configuration
+    remove: True
+
+  -
+    name: "sub.mysite.com"
+    application: "run_submysite:flask_app"
+    nginx:
+      aliases:
+        "/static": "my_static_dir"
+      ssl_cert: "ssl/site.cert"
+      ssl_key: "ssl/site.key"
+    remove: False
+  -
+    name: "myphphtmlsite.com"
+    nginx:
+      root_dir: "html"
+
+# SCRIPTS: A dict of all scripts to execute
+scripts:
+
+  # PRE-WEB: scripts to run before web deployment
+  pre_web:
+    -
+      command: ""
+    -
+      command: "myscript.py"
+      directory: ""
+
+  # POST-WEB: scripts to run after web deployment
+  post_web:
+    -
+      command: ""
+    -
+      directory: ""
+      command: "$PTHON myscript.py"
+
+
+  # UNDEPLOY: Will run this script when UNDEPLOYING
+  undeploy:
+    -
+      command: ""
+    -
+      directory: ""
+      command: "$PTHON myscript.py"
+
+
+  # MY_SCRIPT_NAME: Custom script by name
+  my_script_name:
+    -
+      command: ""
+    -
+      directory: ""
+      command: "$PTHON myscript.py"
+
+
+# WORKERS: Run custom script or app in the background using supervisor
+workers:
+  -
+    name: "myworker1"
+    command: "$PYTHON myyworker1.py
+  -
+    name: "myworker2"
+    directory: ""
+    command: "$PYTHON myyworker2.py"
+    user: ""
+    exclude: True  # Prevent this worker from rerunning
+
+
+# MAINTENANCE: To turn on/off maintenance programmatically
+maintenance:
+  active: True  # Bool to turn on and off maintenance
+  page: "maintenance/index.html" # The maintenance page to use instead of the default, relative to the site's root
+  allow_ips: # List of ips to allow to view the site
+    - 1.2.4.5
+    - 2.3.4.5
+
+
+
