@@ -5,7 +5,7 @@ Propel is a package to deploy multiple Python sites/application in virtualenv.
 
 It also allows you to deploy PHP/HTML applications, run scripts and run workers with Supervisor.
 
-For Python application it uses Virtualenv to isolate each application, Gunicorn+Gevent as the backend server,
+For Python application, it uses Virtualenv to isolate each application, Gunicorn+Gevent as the backend server,
 Supervisor and Nginx.
 
 For PHP/HTML sites, it just uses the path as it would in normal environment, and you must have php-fpm
@@ -45,7 +45,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.22.3"
+__version__ = "0.22.4"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Propel"
@@ -74,19 +74,19 @@ DIST_CONF = {
         "NGINX_CONF_FILE": "/etc/nginx/conf.d/%s.conf",
         "APT_GET": "yum",
         "INSTALL_PROGRAMS": ["nginx", 'groupinstall "Development Tools"', "python-devel", "php-fpm"],
-        "SETUP_CMD": ["sudo supervisord", "sudo service nginx start", "sudo service php-fpm"],
-        "UPSTART_PROGRAMS": ["nginx", "supervisord", "php-fpm" ],
+        "RELOAD_PROGRAMS": ["nginx", "php-fpm"],
+        "SETUP_CMD": ["sudo supervisord", "sudo service nginx start", "sudo service php-fpm start"],
+        "UPSTART_PROGRAMS": ["nginx", "supervisord", "php-fpm"],
         "UPSTART_CMD": "chkconfig %s on"      
     },
     "DEBIAN": {
         "NGINX_CONF_FILE": "/etc/nginx/sites-enabled/%s.conf",
         "APT_GET": "apt-get",
-        "RELOAD_CMD": ["nginx", "php5-fpm"],
-        "INSTALL_PROGRAMS":["nginx", 'python-dev', "php5-fpm"],
+        "INSTALL_PROGRAMS": ["nginx", 'python-dev', "php5-fpm"],
+        "RELOAD_PROGRAMS": ["nginx", "php5-fpm"],
+        "SETUP_CMD": ["sudo supervisord", "sudo service nginx start", "sudo service php5-fpm start"],
         "UPSTART_PROGRAMS": ["nginx", "supervisord", "php5-fpm"],
-        "SETUP_CMD": ["sudo supervisord", "sudo service nginx start", "sudo service php5-fpm"],
         "UPSTART_CMD": "update-rc.d %s defaults"
-        
     }
 }
 
@@ -349,8 +349,8 @@ def get_dist_config(key):
         return DIST_CONF[dist].get(key)
     raise AttributeError("Dist config '%s' not found" % key)
 
-def nginx_reload():
-    for svc in get_dist_config("RELOAD_CMD"):
+def reload_services():
+    for svc in get_dist_config("RELOAD_PROGRAMS"):
         run("sudo service %s reload" % svc)
 
 def get_domain_conf_file(domain):
@@ -389,7 +389,7 @@ def _parse_command(command, virtualenv=None, directory=None):
     return command
 
 def reload_server():
-    nginx_reload()
+    reload_services()
     Supervisor.reload()
 
 class Supervisor(object):
@@ -647,7 +647,7 @@ class App(object):
                                        )
                         content = Template(NGINX_CONFIG).render(**context)
                         f.write(content)
-                nginx_reload()
+                reload_services()
             else:
                 raise TypeError("'web' is missing in propel.yml")
 
