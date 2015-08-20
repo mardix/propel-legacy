@@ -1,3 +1,7 @@
+- 0.22.5
+    - Fixed missing 'environment'
+    - Reformat the result summary
+
 - 0.22.4
     - Fixed missing data
 

@@ -45,7 +45,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.22.4"
+__version__ = "0.22.5"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Propel"
@@ -499,9 +499,7 @@ class Git(object):
 class App(object):
     virtualenv = None
     directory = None
-    proxy_port = None
-    web_name = None
-    supervisor_process_name = None
+    deployed_info = []
 
     def __init__(self, directory):
         self.config = get_deploy_config(directory)
@@ -527,15 +525,17 @@ class App(object):
                 if "application" in site and not self.virtualenv.get("name"):
                     raise TypeError("'virtualenv' in required for web Python app")
 
-                name = site["name"]
-                self.web_name = name
-                nginx = site["nginx"] if "nginx" in site else {}
-                gunicorn_option = site["gunicorn"] if "gunicorn" in site else {}
-                application = site["application"] if "application" in site else None
-                gunicorn_app_name = "gunicorn_%s" % (name.replace(".", "_"))
-                remove = True if "remove" in site and site["remove"] is True else False
+                name = site.get("name")
                 directory = self.directory
+                nginx = site.get("nginx", {})
+                gunicorn_option = site.get("gunicorn", {})
+                application = site.get("application", None)
+                environment = site.get("environment", None)
+                user = site.get("user", "root")
+                remove = site.get("remove", False)
+                gunicorn_app_name = "gunicorn_%s" % (name.replace(".", "_"))
                 nginx_config_file = get_domain_conf_file(name)
+                proxy_port = None
 
                 if remove or undeploy:
                     if os.path.isfile(nginx_config_file):
@@ -546,8 +546,7 @@ class App(object):
 
                 # Python app will use Gunicorn+Gevent and Supervisor
                 if application:
-                    self.supervisor_process_name = gunicorn_app_name
-                    self.proxy_port = generate_random_port()
+                    proxy_port = generate_random_port()
                     default_gunicorn = {
                         "workers": (multiprocessing.cpu_count() * 2) + 1,
                         "threads": 4,
@@ -566,13 +565,15 @@ class App(object):
                             or (_maintenance["active"] and _maintenance["allow_ips"]):
                         command = "{GUNICORN_BIN} -b 0.0.0.0:{PROXY_PORT} {APP} {SETTINGS}"\
                                   .format(GUNICORN_BIN=gunicorn_bin,
-                                          PROXY_PORT=self.proxy_port,
+                                          PROXY_PORT=proxy_port,
                                           APP=application,
                                           SETTINGS=settings,)
 
                         Supervisor.start(name=gunicorn_app_name,
                                          command=command,
-                                         directory=directory)
+                                         directory=directory,
+                                         user=user,
+                                         environment=environment)
                     else:
                         Supervisor.stop(name=gunicorn_app_name, remove=True)
 
@@ -582,11 +583,13 @@ class App(object):
                     if not os.path.isdir(logs_dir):
                         os.makedirs(logs_dir)
 
+                self.deployed_info.append((name, proxy_port, gunicorn_app_name))
+
                 with open(nginx_config_file, "wb") as f:
                     context = dict(NAME=name,
                                    SERVER_NAME=nginx.get("server_name", name),
                                    DIRECTORY=directory,
-                                   PROXY_PORT=self.proxy_port,
+                                   PROXY_PORT=proxy_port,
                                    PORT=nginx.get("port", NGINX_DEFAULT_PORT),
                                    ROOT_DIR=nginx.get("root_dir", ""),
                                    ALIASES=nginx.get("aliases", {}),
@@ -680,15 +683,15 @@ class App(object):
                 if "command" not in worker:
                     raise TypeError("'command' is missing in workers")
 
-                name = worker["name"]
-                user = worker["user"] if "user" in worker else "root"
-                environment = worker["environment"] if "environment" in worker else ""
-                directory = worker["directory"] if "directory" in worker else self.directory
+                name = worker.get("name")
+                user = worker.get("user", "root")
+                environment = worker.get("environment", "")
+                directory = worker.get("directory", self.directory)
                 command = _parse_command(command=worker["command"],
                                          virtualenv=self.virtualenv.get("name"),
                                          directory=directory)
-                remove = True if "remove" in worker and worker["remove"] is True else False
-                exclude = True if "exclude" in worker and worker["exclude"] is True else False
+                remove = worker.get("remove", False)
+                exclude = worker.get("exclude", False)
 
                 if undeploy:
                     remove = True
@@ -849,17 +852,15 @@ def cmd():
 
         if app:
             _print("-" * 80)
-            _print("* Propel Summary *")
+            _print("* Propel Deployment Summary *")
             _print("")
             if app.virtualenv.get("name"):
-                _print("Virtualenv: %s" % app.virtualenv.get("name"))
-            if arg.websites:
-                if app.web_name:
-                    _print("Webapp: %s" % app.web_name)
-                    if app.proxy_port:
-                        _print("Gunicorn port: %s" % app.proxy_port)
-            if app.supervisor_process_name:
-                _print("Supervisor process name: %s" % app.supervisor_process_name)
+                _print("- Virtualenv: %s" % app.virtualenv.get("name"))
+            if arg.websites and app.deployed_info:
+                for i in app.deployed_info:
+                    _print("- Webapp: %s" % i[0])
+                    _print("\t Gunicorn port: %s" % i[1])
+                    _print("\t Supervisor process name: %s" % i[0])
 
     except Exception as ex:
         _print("Propel ERROR: %s " % ex.__repr__())

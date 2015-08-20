@@ -16,6 +16,7 @@ web:
 
     name: "mysite.com" # The site name
     application: "run_mysite:flask_app" # for python application
+    environment: ""  # Environment to pass the application
 
     # Nginx related config
     nginx:
