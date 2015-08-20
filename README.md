@@ -319,6 +319,7 @@ You can add more NGINX and Gunicorn config. Gunicorn config is only for Python a
         application: "run:flask_app"
         remove: False
         exclude: False
+        environment: KEY1="value1",KEY2="value2"
         
 		# Nginx Config
         nginx:
@@ -360,6 +361,8 @@ You can add more NGINX and Gunicorn config. Gunicorn config is only for Python a
 - remove: (bool) When True, it will remove the Nginx config file and stop Supervisor if Python, from the server
 
 - exclude: (bool) When True, it will not try to deploy or re-deploy. 
+
+- environment: A list of key/value pairs in the form KEY="val",KEY2="val2" that will be placed in the supervisord process’ environment
 
 
 #### NGINX config

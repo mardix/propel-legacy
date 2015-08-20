@@ -16,7 +16,7 @@ web:
 
     name: "mysite.com" # The site name
     application: "run_mysite:flask_app" # for python application
-    environment: ""  # Environment to pass the application
+    environment: ""  # A list of key/value pairs in the form KEY="val",KEY2="val2" that will be placed in the supervisord process’ environment
 
     # Nginx related config
     nginx:
@@ -99,10 +99,12 @@ workers:
   -
     name: "myworker1"
     command: "$PYTHON_ENV myyworker1.py
+    environment: ""
   -
     name: "myworker2"
     directory: ""
     command: "$PYTHON_ENV myyworker2.py"
+    environment: ""
     user: ""
     exclude: True  # Prevent this worker from rerunning
 
