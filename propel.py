@@ -45,7 +45,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.22.5"
+__version__ = "0.22.6"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Propel"
@@ -593,7 +593,7 @@ class App(object):
                                    PORT=nginx.get("port", NGINX_DEFAULT_PORT),
                                    ROOT_DIR=nginx.get("root_dir", ""),
                                    ALIASES=nginx.get("aliases", {}),
-                                   FORCE_NON_WWW=nginx.get("force_non_www", False),
+                                   FORCE_NON_WWW=nginx.get("force_non_www", True),
                                    FORCE_WWW=nginx.get("force_www", False),
                                    SERVER_DIRECTIVES=nginx.get("server_directives", ""),
                                    SSL_CERT=nginx.get("ssl_cert", ""),
@@ -755,6 +755,13 @@ def cmd():
         _print("*" * 80)
         _print("%s %s" % (__NAME__, __version__))
         _print("")
+
+        # Supervisor test
+        if not os.path.isdir(SUPERVISOR_CONF_DIR):
+            print("PROPEL has not been setup yet.")
+            print("Run propel-setup")
+            print("")
+            exit()
 
         git = Git(CWD)
         app = None
