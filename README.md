@@ -312,6 +312,7 @@ You can add more NGINX and Gunicorn config. Gunicorn config is only for Python a
       name: "mynewsite.com"
 	  rebuild: False
 	  directory: ""
+	  pip_options: ""
 	  
     web:
       -
@@ -350,7 +351,7 @@ You can add more NGINX and Gunicorn config. Gunicorn config is only for Python a
 
 - directory: (path) The virtualenvs directory. By default it is set to /root/.virtualenvs 
 
-
+- pip_options: (string) String of options to pass to pip. ie: --process-dependency-links --upgrade 
           
 #### Web config
 
@@ -644,7 +645,7 @@ To do so, Propel allows to set a list of ips you would like to give access while
         - 1.2.4.5
         - 2.3.4.5
         
-#### Deactive Maintenance
+#### Deactivate Maintenance Mode
 
 To deactivate and put the full site back online
 

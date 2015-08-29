@@ -1,3 +1,6 @@
+- 0.23.0
+    - added 'pip_options' to set pip options
+
 - 0.22.6
     - Add test to see if 'propel-setup' has been setup
     - Set force_non_www to True by default

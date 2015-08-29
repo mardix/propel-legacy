@@ -9,6 +9,7 @@ virtualenv:
   name: ""  # The name of the virtualenv. Required for python web/workers
   directory: "" # The directory of the virtualenvs, by default it's /root/.virtualenvs
   rebuild: ""  # (bool) To rebuild
+  pip_options: "" # options for pip, ie: --process-dependency-links --upgrade
 
 # WEB: list of dict of web sites/application to deploy
 web:

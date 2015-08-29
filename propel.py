@@ -45,7 +45,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.22.6"
+__version__ = "0.23.0"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Propel"
@@ -377,7 +377,7 @@ def get_deploy_config(directory):
     if not DEPLOY_CONFIG:
         yaml_file = directory + "/" + DEPLOY_CONFIG_FILE
         if not os.path.isfile(yaml_file):
-            raise Exception("Deploy file '%s' is required" % yaml_file)
+            raise Exception("Propel file '%s' is missing" % yaml_file)
         with open(yaml_file) as jfile:
             DEPLOY_CONFIG = yaml.load(jfile)
     return DEPLOY_CONFIG
@@ -523,7 +523,7 @@ class App(object):
                 if "name" not in site:
                     raise TypeError("'name' is missing in sites config")
                 if "application" in site and not self.virtualenv.get("name"):
-                    raise TypeError("'virtualenv' in required for web Python app")
+                    raise TypeError("'virtualenv' is missing for Python web/app")
 
                 name = site.get("name")
                 directory = self.directory
@@ -710,11 +710,14 @@ class App(object):
                                  user=user,
                                  environment=environment)
 
-    def install_requirements(self):
+    def install_requirements(self, pip_options=None):
         requirements_file = self.directory + "/requirements.txt"
         if os.path.isfile(requirements_file):
-            pip = get_venv_bin(bin_program="pip", virtualenv=self.virtualenv.get("name"))
-            runvenv("%s install -r %s" % (pip, requirements_file), virtualenv=self.virtualenv.get("name"))
+            pip = get_venv_bin(bin_program="pip",
+                               virtualenv=self.virtualenv.get("name"))
+            pip_options = pip_options or ""
+            runvenv("%s install -r %s %s" % (pip, requirements_file, pip_options),
+                    virtualenv=self.virtualenv.get("name"))
 
     def setup_virtualenv(self):
         if self.virtualenv.get("name"):
@@ -803,7 +806,8 @@ def cmd():
                     VIRTUALENV_DIRECTORY = app.virtualenv.get("directory")
 
                 _print("> INSTALLING REQUIREMENTS ...")
-                app.install_requirements()
+                pip_options = app.virtualenv.get("pip_options", "")
+                app.install_requirements(pip_options)
 
             # Web
             if arg.websites:
