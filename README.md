@@ -454,7 +454,7 @@ Each command must have the `command` param, and optionally `directory` if the sc
           command: "uname"
         -
           directory: ""
-          command: "$PTHON myscript.py"
+          command: "$PYTHON_ENV myscript.py"
     
     
       # UNDEPLOY: Will run this script when UNDEPLOYING
@@ -463,7 +463,7 @@ Each command must have the `command` param, and optionally `directory` if the sc
           command: "time"
         -
           directory: ""
-          command: "$PTHON myscript.py"
+          command: "$PYTHON_ENV myscript.py"
     
     
       # MY_SCRIPT_NAME: Custom script by name
@@ -472,7 +472,7 @@ Each command must have the `command` param, and optionally `directory` if the sc
           command: ""
         -
           directory: ""
-          command: "$PTHON myscript.py"
+          command: "$PYTHON_ENV myscript.py"
           
 And to run any of these scripts, you can just do:
 
