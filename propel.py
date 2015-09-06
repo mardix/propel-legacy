@@ -45,7 +45,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.23.0"
+__version__ = "0.24.0"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Propel"
@@ -533,9 +533,14 @@ class App(object):
                 environment = site.get("environment", None)
                 user = site.get("user", "root")
                 remove = site.get("remove", False)
+                exclude = site.get("exclude", False)
                 gunicorn_app_name = "gunicorn_%s" % (name.replace(".", "_"))
                 nginx_config_file = get_domain_conf_file(name)
                 proxy_port = None
+
+                # Exclude from re/deploying
+                if exclude:
+                    continue
 
                 if remove or undeploy:
                     if os.path.isfile(nginx_config_file):
@@ -665,11 +670,11 @@ class App(object):
                     raise TypeError("'command' is missing in scripts")
 
                 # Exclude from running
-                exclude = True if "exclude" in script and script["exclude"] is True else False
+                exclude = script.get("exclude", False)
                 if exclude:
                     continue
 
-                directory = script["directory"] if "directory" in script else self.directory
+                directory = script.get("directory", self.directory)
                 command = _parse_command(command=script["command"],
                                          virtualenv=self.virtualenv.get("name"),
                                          directory=directory)
@@ -693,14 +698,10 @@ class App(object):
                 remove = worker.get("remove", False)
                 exclude = worker.get("exclude", False)
 
-                if undeploy:
-                    remove = True
-                    exclude = False
-
-                if exclude:  # Exclude worker from running
+                if exclude:  # Exclude worker from re/running
                     continue
 
-                if remove:
+                if remove or undeploy:
                     Supervisor.stop(name=name, remove=True)
                     continue
 

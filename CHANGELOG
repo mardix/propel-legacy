@@ -1,3 +1,7 @@
+- 0.24.0
+    - Fixed missing 'exclude' in web options. 'exclude' takes precedence over 'remove'.
+      If found, it will exclude it
+
 - 0.23.0
     - added 'pip_options' to set pip options
 

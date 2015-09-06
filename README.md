@@ -361,7 +361,7 @@ You can add more NGINX and Gunicorn config. Gunicorn config is only for Python a
 
 - remove: (bool) When True, it will remove the Nginx config file and stop Supervisor if Python, from the server
 
-- exclude: (bool) When True, it will not try to deploy or re-deploy. 
+- exclude: (bool) When True, it will not try to deploy or re-deploy. It takes precedence over 'remove'. 
 
 - environment: A list of key/value pairs in the form KEY="val",KEY2="val2" that will be placed in the supervisord process’ environment
 
@@ -580,7 +580,7 @@ Workers are scripts that are run continuously in the background and are monitore
 
 - environment: (string) Environment string
 
-- exclude: (bool) When True it will no run or rerun the worker
+- exclude: (bool) When True it will no run or rerun the worker. It takes precedence over 'remove'. 
 
 - remove: (bool) When True it will remove the worker from the script
 
