@@ -1,6 +1,6 @@
 # Propel
 
-## About
+### About
  
 Propel allows you to deploy multiple Python/PHP/HTML apps (sites) 
 on a single server, run scripts and background workers.
@@ -188,6 +188,24 @@ To activate/deactivate the site maintenance page
     
     propel --maintenance off
 
+### propel -l | --list
+
+To list all the running applications. Running applications are active apps on Supervisor.
+
+    propel -l
+
+
+### propel -c | --create [name]
+
+To create a new application bare repository ready to push application to. 
+
+    propel -c mynewapp
+    
+    # or
+    
+    # It will place the repository inside of /myother-dir
+    propel -c mynewapp --basedir=/myother-dir 
+    
 ---
 
 # propel.yml

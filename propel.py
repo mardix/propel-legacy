@@ -45,7 +45,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.24.0"
+__version__ = "0.25.0"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Propel"
@@ -534,7 +534,7 @@ class App(object):
                 user = site.get("user", "root")
                 remove = site.get("remove", False)
                 exclude = site.get("exclude", False)
-                gunicorn_app_name = "gunicorn_%s" % (name.replace(".", "_"))
+                gunicorn_app_name = "propel_%s" % (name.replace(".", "_"))
                 nginx_config_file = get_domain_conf_file(name)
                 proxy_port = None
 
@@ -752,6 +752,8 @@ def cmd():
         parser.add_argument("--git-push-cmd", help="Setup Command to execute after git push. Put cmds within quotes"
                                                    "ie: [--git-push-cmd $name 'ls  -l' 'cd ']", nargs='*')
         parser.add_argument("--silent", help="Disable verbosity", action="store_true")
+        parser.add_argument("-c", "--create", help="Create a new application directory, set the git init for web push")
+        parser.add_argument("--basedir", help="The base directory when creating a new application. By default it's /home")
 
         arg = parser.parse_args()
         VERBOSE = False if arg.silent else True
@@ -766,6 +768,29 @@ def cmd():
             print("Run propel-setup")
             print("")
             exit()
+
+        if arg.create:
+            basedir = "/home"
+            if arg.basedir:
+                basedir = arg.dir
+            projectname = arg.create.lower()
+
+            _print("> PROPEL CREATE NEW APP: %s" % projectname)
+
+            if not os.path.isdir(basedir):
+                raise IOError("Base directory: '%s' doesn't exist")
+
+            CWD = "%s/%s" % (basedir, projectname)
+            arg.git_init = projectname
+            arg.git_push_web = projectname
+            arg.maintenance = False
+            arg.undeploy = False
+            arg.websites = False
+            arg.scripts = False
+            arg.workers = False
+
+            if not os.path.exists(CWD):
+                os.makedirs(CWD)
 
         git = Git(CWD)
         app = None
@@ -843,6 +868,7 @@ def cmd():
                 _print("> Creating Git Bare repo: %s ..." % bare_repo )
                 if git.init_bare_repo(repo):
                     git.update_post_receive_hook(repo, False)
+                _print("> To push: user@host:%s" % bare_repo)
 
             if arg.git_push_web:
                 repo = arg.git_push_web

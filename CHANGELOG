@@ -1,3 +1,10 @@
+
+- 0.25.0
+    - Change the name of the supervisor app name
+    - Added command 'propel -l' to list all the running applications
+    - Added command 'propel -c' to create a new repository directory
+        ie: propel -c mynewapp
+
 - 0.24.0
     - Fixed missing 'exclude' in web options. 'exclude' takes precedence over 'remove'.
       If found, it will exclude it
