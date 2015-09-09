@@ -77,7 +77,8 @@ DIST_CONF = {
         "RELOAD_PROGRAMS": ["nginx", "php-fpm"],
         "SETUP_CMD": ["sudo supervisord", "sudo service nginx start", "sudo service php-fpm start"],
         "UPSTART_PROGRAMS": ["nginx", "supervisord", "php-fpm"],
-        "UPSTART_CMD": "chkconfig %s on"      
+        "UPSTART_CMD": "chkconfig %s on",
+        "SUPERVISOR_INCLUDE_INIT_FUNCTIONS": "/etc/rc.d/init.d/functions"
     },
     "DEBIAN": {
         "NGINX_CONF_FILE": "/etc/nginx/sites-enabled/%s.conf",
@@ -86,7 +87,8 @@ DIST_CONF = {
         "RELOAD_PROGRAMS": ["nginx", "php5-fpm"],
         "SETUP_CMD": ["sudo supervisord", "sudo service nginx start", "sudo service php5-fpm start"],
         "UPSTART_PROGRAMS": ["nginx", "supervisord", "php5-fpm"],
-        "UPSTART_CMD": "update-rc.d %s defaults"
+        "UPSTART_CMD": "update-rc.d %s defaults",
+        "SUPERVISOR_INCLUDE_INIT_FUNCTIONS": "/lib/lsb/init-functions"
     }
 }
 
@@ -936,7 +938,7 @@ def setup_propel():
 # description: Supervisor Server
 # processname: supervisord
 
-. /etc/rc.d/init.d/functions
+. {INCLUDE_INIT_FUNCTIONS}
 prog="supervisord"
 prefix="/usr/local"
 exec_prefix="${prefix}"
@@ -973,7 +975,7 @@ case "$1" in
     echo "Usage: $0 {start|stop|restart|status}"
   ;;
 esac
-"""
+""".format(INCLUDE_INIT_FUNCTIONS=get_dist_config("SUPERVISOR_INCLUDE_INIT_FUNCTIONS"))
 
     MAINTENANCE_PAGE = """
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
