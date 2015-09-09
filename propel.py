@@ -771,10 +771,6 @@ def cmd():
             print("")
             exit()
 
-        if arg.processes:
-            Supervisor.clt("", "")
-            exit()
-
         if arg.create:
             basedir = "/home"
             if arg.basedir:
