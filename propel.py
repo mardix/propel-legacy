@@ -934,7 +934,7 @@ def setup_propel():
 # description: Supervisor Server
 # processname: supervisord
 
-. /etc/rc.d/init.d/functions
+. /lib/lsb/init-functions
 prog="supervisord"
 prefix="/usr/local"
 exec_prefix="${prefix}"
