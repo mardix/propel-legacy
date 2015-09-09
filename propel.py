@@ -45,7 +45,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.25.0-dev07"
+__version__ = "0.25.0-dev08"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Propel"
@@ -109,7 +109,6 @@ stdout_logfile={log}
 stderr_logfile={log}
 environment={environment}
 """
-SUPERVISOR_PREFIX = "propel__"
 
 NGINX_CONFIG = """
 {%- macro SET_PATH(directory, path="") %}
@@ -758,6 +757,7 @@ def cmd():
         parser.add_argument("--silent", help="Disable verbosity", action="store_true")
         parser.add_argument("-c", "--create", help="Create a new application directory, set the git init for web push")
         parser.add_argument("--basedir", help="The base directory when creating a new application. By default it's /home")
+        parser.add_argument("--processes", help="Show Supervisor processes, which will include Propel's one", action="store_true")
 
         arg = parser.parse_args()
         VERBOSE = False if arg.silent else True
@@ -771,6 +771,10 @@ def cmd():
             print("PROPEL has not been setup yet.")
             print("Run propel-setup")
             print("")
+            exit()
+
+        if arg.processes:
+            Supervisor.clt("", "")
             exit()
 
         if arg.create:
