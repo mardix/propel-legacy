@@ -45,7 +45,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.25.0-dev03"
+__version__ = "0.25.0-dev04"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Propel"
@@ -534,7 +534,7 @@ class App(object):
                 user = site.get("user", "root")
                 remove = site.get("remove", False)
                 exclude = site.get("exclude", False)
-                gunicorn_app_name = "propel_%s" % (name.replace(".", "_"))
+                gunicorn_app_name = "propel_web__%s" % (name.replace(".", "_"))
                 nginx_config_file = get_domain_conf_file(name)
                 proxy_port = None
 
@@ -688,7 +688,7 @@ class App(object):
                 if "command" not in worker:
                     raise TypeError("'command' is missing in workers")
 
-                name = worker.get("name")
+                name = "propel_worker__%s" % worker.get("name")
                 user = worker.get("user", "root")
                 environment = worker.get("environment", "")
                 directory = worker.get("directory", self.directory)
@@ -756,6 +756,7 @@ def cmd():
         parser.add_argument("--silent", help="Disable verbosity", action="store_true")
         parser.add_argument("-c", "--create", help="Create a new application directory, set the git init for web push")
         parser.add_argument("--basedir", help="The base directory when creating a new application. By default it's /home")
+        parser.add_argument("-l", "--list", "Display all supervisor running process, which will include Propel processes")
 
         arg = parser.parse_args()
         VERBOSE = False if arg.silent else True
@@ -769,6 +770,10 @@ def cmd():
             print("PROPEL has not been setup yet.")
             print("Run propel-setup")
             print("")
+            exit()
+
+        if arg.list:
+            Supervisor.clt("", "")
             exit()
 
         if arg.create:
