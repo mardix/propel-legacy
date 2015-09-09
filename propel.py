@@ -109,6 +109,7 @@ stdout_logfile={log}
 stderr_logfile={log}
 environment={environment}
 """
+SUPERVISOR_PREFIX = "propel__"
 
 NGINX_CONFIG = """
 {%- macro SET_PATH(directory, path="") %}
@@ -688,6 +689,7 @@ class App(object):
                 if "command" not in worker:
                     raise TypeError("'command' is missing in workers")
 
+
                 name = "propel_worker__%s" % worker.get("name")
                 user = worker.get("user", "root")
                 environment = worker.get("environment", "")
@@ -733,10 +735,11 @@ class App(object):
 
 def cmd():
     global CWD
-    global VIRTUALENV_DIRECTORY
-    global VERBOSE
 
     try:
+        global VIRTUALENV_DIRECTORY
+        global VERBOSE
+
         parser = argparse.ArgumentParser(description="%s %s" % (__NAME__, __version__))
         parser.add_argument("-w", "--websites", help="Deploy all sites", action="store_true")
         parser.add_argument("-s", "--scripts", help="Run script by specifying name:"
@@ -755,7 +758,6 @@ def cmd():
         parser.add_argument("--silent", help="Disable verbosity", action="store_true")
         parser.add_argument("-c", "--create", help="Create a new application directory, set the git init for web push")
         parser.add_argument("--basedir", help="The base directory when creating a new application. By default it's /home")
-        parser.add_argument("--processes", "Display all supervisor running process, which will include Propel processes", action="store_true")
 
         arg = parser.parse_args()
         VERBOSE = False if arg.silent else True
@@ -930,7 +932,7 @@ def setup_propel():
 # description: Supervisor Server
 # processname: supervisord
 
-. /lib/lsb/init-functions
+. /etc/rc.d/init.d/functions
 prog="supervisord"
 prefix="/usr/local"
 exec_prefix="${prefix}"
