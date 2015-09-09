@@ -733,11 +733,10 @@ class App(object):
 
 def cmd():
     global CWD
+    global VIRTUALENV_DIRECTORY
+    global VERBOSE
 
     try:
-        global VIRTUALENV_DIRECTORY
-        global VERBOSE
-
         parser = argparse.ArgumentParser(description="%s %s" % (__NAME__, __version__))
         parser.add_argument("-w", "--websites", help="Deploy all sites", action="store_true")
         parser.add_argument("-s", "--scripts", help="Run script by specifying name:"
@@ -756,7 +755,7 @@ def cmd():
         parser.add_argument("--silent", help="Disable verbosity", action="store_true")
         parser.add_argument("-c", "--create", help="Create a new application directory, set the git init for web push")
         parser.add_argument("--basedir", help="The base directory when creating a new application. By default it's /home")
-        parser.add_argument("-l", "--list", "Display all supervisor running process, which will include Propel processes", action="store_true")
+        parser.add_argument("--processes", "Display all supervisor running process, which will include Propel processes", action="store_true")
 
         arg = parser.parse_args()
         VERBOSE = False if arg.silent else True
@@ -772,7 +771,7 @@ def cmd():
             print("")
             exit()
 
-        if arg.list:
+        if arg.processes:
             Supervisor.clt("", "")
             exit()
 
