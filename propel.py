@@ -45,7 +45,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.25.0-dev02"
+__version__ = "0.25.0-dev03"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Propel"
@@ -782,7 +782,8 @@ def cmd():
             if not os.path.isdir(basedir):
                 raise IOError("Base directory: '%s' doesn't exist")
 
-            CWD = "%s/%s" % (basedir, projectname)
+            CWD = basedir
+            project_dir = "%s/%s" % (CWD, projectname)
             arg.git_init = projectname
             arg.git_push_web = projectname
             arg.maintenance = False
@@ -791,8 +792,8 @@ def cmd():
             arg.scripts = False
             arg.workers = False
 
-            if not os.path.exists(CWD):
-                os.makedirs(CWD)
+            if not os.path.exists(project_dir):
+                os.makedirs(project_dir)
 
         git = Git(CWD)
         app = None
