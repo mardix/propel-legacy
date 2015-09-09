@@ -45,7 +45,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.25.0-dev04"
+__version__ = "0.25.0-dev05"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Propel"
@@ -756,7 +756,7 @@ def cmd():
         parser.add_argument("--silent", help="Disable verbosity", action="store_true")
         parser.add_argument("-c", "--create", help="Create a new application directory, set the git init for web push")
         parser.add_argument("--basedir", help="The base directory when creating a new application. By default it's /home")
-        parser.add_argument("-l", "--list", "Display all supervisor running process, which will include Propel processes")
+        parser.add_argument("-l", "--list", "Display all supervisor running process, which will include Propel processes", action="store_true")
 
         arg = parser.parse_args()
         VERBOSE = False if arg.silent else True
