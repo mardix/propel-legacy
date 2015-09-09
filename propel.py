@@ -732,6 +732,8 @@ class App(object):
 
 
 def cmd():
+    global CWD
+
     try:
         global VIRTUALENV_DIRECTORY
         global VERBOSE
