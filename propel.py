@@ -774,7 +774,7 @@ def cmd():
             exit()
 
         if arg.processes:
-            Supervisor.ctl("", "")
+            _print(run(SUPERVISOR_CTL, verbose=False))
             exit()
 
         if arg.create:
