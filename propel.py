@@ -45,7 +45,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.25.0"
+__version__ = "0.25.1"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Propel"
@@ -73,22 +73,18 @@ DIST_CONF = {
     "RHEL": {
         "NGINX_CONF_FILE": "/etc/nginx/conf.d/%s.conf",
         "APT_GET": "yum",
-        "INSTALL_PROGRAMS": ["nginx", 'groupinstall "Development Tools"', "python-devel", "php-fpm"],
+        "INSTALL_PROGRAMS": ["nginx", 'groupinstall "Development Tools"', "python-devel", "php-fpm", "supervisor"],
         "RELOAD_PROGRAMS": ["nginx", "php-fpm"],
-        "SETUP_CMD": ["sudo supervisord", "sudo service nginx start", "sudo service php-fpm start"],
-        "UPSTART_PROGRAMS": ["nginx", "supervisord", "php-fpm"],
-        "UPSTART_CMD": "chkconfig %s on",
-        "SUPERVISOR_INCLUDE_INIT_FUNCTIONS": "/etc/rc.d/init.d/functions"
+        "SERVICES": ["supervisor", "nginx", "php-fpm"],
+        "UPSTART_CMD": "chkconfig %s on"
     },
     "DEBIAN": {
         "NGINX_CONF_FILE": "/etc/nginx/sites-enabled/%s.conf",
         "APT_GET": "apt-get",
-        "INSTALL_PROGRAMS": ["nginx", 'python-dev', "php5-fpm"],
+        "INSTALL_PROGRAMS": ["nginx", 'python-dev', "php5-fpm", "supervisor"],
         "RELOAD_PROGRAMS": ["nginx", "php5-fpm"],
-        "SETUP_CMD": ["sudo supervisord", "sudo service nginx start", "sudo service php5-fpm start"],
-        "UPSTART_PROGRAMS": ["nginx", "supervisord", "php5-fpm"],
-        "UPSTART_CMD": "update-rc.d %s defaults",
-        "SUPERVISOR_INCLUDE_INIT_FUNCTIONS": "/lib/lsb/init-functions"
+        "SERVICES": ["supervisor", "nginx", "php5-fpm"],
+        "UPSTART_CMD": "sudo update-rc.d %s defaults"
     }
 }
 
@@ -690,7 +686,6 @@ class App(object):
                 if "command" not in worker:
                     raise TypeError("'command' is missing in workers")
 
-
                 name = "propel_worker__%s" % worker.get("name")
                 user = worker.get("user", "root")
                 environment = worker.get("environment", "")
@@ -938,53 +933,6 @@ def setup_propel():
 
     _print("Setting up Propel ... \n\n")
 
-    INIT_FILE = """
-#!/bin/sh
-# /etc/rc.d/init.d/supervisord
-# chkconfig: - 64 36
-# description: Supervisor Server
-# processname: supervisord
-
-. %s
-
-prog="supervisord"
-prefix="/usr/local"
-exec_prefix="${prefix}"
-prog_bin="${exec_prefix}/bin/supervisord"
-PIDFILE="/var/run/$prog.pid"
-start()
-{
-        echo -n $"Starting $prog: "
-        daemon $prog_bin --pidfile $PIDFILE
-        [ -f $PIDFILE ] && success $"$prog startup" || failure $"$prog startup"
-        echo
-}
-stop()
-{
-        echo -n $"Shutting down $prog: "
-        [ -f $PIDFILE ] && killproc $prog || success $"$prog shutdown"
-        echo
-}
-case "$1" in
-  start)
-    start
-  ;;
-  stop)
-    stop
-  ;;
-  status)
-        status $prog
-  ;;
-  restart)
-    stop
-    start
-  ;;
-  *)
-    echo "Usage: $0 {start|stop|restart|status}"
-  ;;
-esac
-""" % get_dist_config("SUPERVISOR_INCLUDE_INIT_FUNCTIONS")
-
     MAINTENANCE_PAGE = """
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -1016,9 +964,7 @@ esac
     """
 
     _apt_get = get_dist_config("APT_GET")
-
     conf_file = "/etc/supervisord.conf"
-    init_d = "/etc/init.d/supervisord"
     var_propel_dir = "/var/propel"
     maintenance_page = "%s/maintenance.html" % var_propel_dir
 
@@ -1040,10 +986,6 @@ esac
         lines += "files = " + SUPERVISOR_CONF_DIR + "/*.conf\n"
         f.write(lines)
 
-    with open(init_d, "wb") as f:
-        f.write(INIT_FILE)
-    run("chmod +x %s" % init_d)
-
     # Add the virtualenvwrapper in bashrc
     run("mkdir -p ~/.virtualenvs")
     grep_test = 'if grep -q "#PROPEL-VIRTUALENVWRAPPER-START" ~/.bashrc; then echo "yes"; else echo "no"; fi'
@@ -1057,15 +999,11 @@ esac
         run(bash_venv)
 
     upstart_cmd = get_dist_config("UPSTART_CMD")
-    for _ in get_dist_config("UPSTART_PROGRAMS"):
-        run(upstart_cmd % _)
-
-    for _ in get_dist_config("SETUP_CMD"):
-        run(_)
+    for s in get_dist_config("SERVICES"):
+        run(upstart_cmd % s)
+        run("sudo service %s start" % s)
 
     with open(maintenance_page, "wb") as f:
         f.write(MAINTENANCE_PAGE)
 
     print("\nPropel setup completed!")
-
-
