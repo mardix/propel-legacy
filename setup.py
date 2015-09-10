@@ -12,7 +12,7 @@ setup(
     version=PACKAGE.__version__,
     license=PACKAGE.__license__,
     author=PACKAGE.__author__,
-    author_email='mardix@github.com',
+    author_email='mardix@pylot.io',
     description="A package to deploy sites in virtualenv, run scripts, and deploy workers with supervisor",
     long_description=PACKAGE.__doc__,
     url='http://github.com/mardix/propel/',
@@ -23,10 +23,9 @@ setup(
     install_requires=[
         'jinja2==2.7.3',
         'pyyaml==3.11',
-        'virtualenvwrapper==4.5.1',
-        'supervisor'
+        'virtualenvwrapper==4.5.1'
     ],
-    keywords=['deploy', 'flask', 'gunicorn', 'django', 'workers', 'deploy sites', 'deployapp'],
+    keywords=['deploy', 'propel', 'flask', 'gunicorn', 'django', 'workers', 'deploy sites', 'deployapp'],
     platforms='any',
     classifiers=[
         'Environment :: Web Environment',
