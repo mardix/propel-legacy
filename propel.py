@@ -91,7 +91,7 @@ DIST_CONF = {
 # ------------------------------------------------------------------------------
 
 # SUPERVISOR
-SUPERVISOR_CTL = "/usr/local/bin/supervisorctl"
+SUPERVISOR_CTL = "supervisorctl"
 SUPERVISOR_LOG_DIR = "/var/log/supervisor"
 SUPERVISOR_CONF_DIR = "/etc/supervisor/conf.d"
 SUPERVISOR_TPL = """
