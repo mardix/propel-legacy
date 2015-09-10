@@ -4,6 +4,8 @@
     - Added command 'propel -c' to create a new repository directory
         ie: propel -c mynewapp
 
+    - Added command --ps to show processes
+
 - 0.24.0
     - Fixed missing 'exclude' in web options. 'exclude' takes precedence over 'remove'.
       If found, it will exclude it

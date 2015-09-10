@@ -188,12 +188,6 @@ To activate/deactivate the site maintenance page
     
     propel --maintenance off
 
-### propel -l | --list
-
-To list all the running applications. Running applications are active apps on Supervisor.
-
-    propel -l
-
 
 ### propel -c | --create [name]
 
@@ -205,6 +199,15 @@ To create a new application bare repository ready to push application to.
     
     # It will place the repository inside of /myother-dir
     propel -c mynewapp --basedir=/myother-dir 
+    
+    
+### propel --ps | --processes
+
+To list all the running applications. Running applications are active apps on Supervisor.
+
+    propel -ps
+    
+    propel --processes
     
 ---
 

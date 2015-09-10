@@ -45,7 +45,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.25.0-dev10"
+__version__ = "0.25.0-dev11"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Propel"
@@ -758,6 +758,7 @@ def cmd():
         parser.add_argument("--git-push-cmd", help="Setup Command to execute after git push. Put cmds within quotes"
                                                    "ie: [--git-push-cmd $name 'ls  -l' 'cd ']", nargs='*')
         parser.add_argument("--silent", help="Disable verbosity", action="store_true")
+        parser.add_argument("--ps", "--processes", help="Show all the supervisor processes", action="store_true")
 
         arg = parser.parse_args()
         VERBOSE = False if arg.silent else True
@@ -771,6 +772,10 @@ def cmd():
             print("PROPEL has not been setup yet.")
             print("Run propel-setup")
             print("")
+            exit()
+
+        if arg.processes:
+            print(Supervisor.ctl("status", ""))
             exit()
 
         if arg.create:
