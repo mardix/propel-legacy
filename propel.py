@@ -758,8 +758,8 @@ def cmd():
         arg = parser.parse_args()
         VERBOSE = False if arg.silent else True
 
-        _print("*" * 80)
-        _print("%s %s" % (__NAME__, __version__))
+        _print("-" * 80)
+        _print("PROPEL %s" % __version__)
         _print("")
 
         # Supervisor test
@@ -771,7 +771,7 @@ def cmd():
 
         # Show processes
         if arg.ps:
-            print("PROPEL: Supervisor processes\n")
+            print("> SUPERVISOR PROCESSES\n")
             Supervisor.ctl("status", "")
             print("")
             exit()
@@ -782,7 +782,7 @@ def cmd():
                 basedir = arg.dir
             projectname = arg.create.lower()
 
-            _print("> PROPEL CREATE NEW REPOSITORY: %s \n" % projectname)
+            _print("> CREATE NEW REPOSITORY : %s \n" % projectname)
 
             if not os.path.isdir(basedir):
                 raise IOError("Base directory: '%s' doesn't exist")
@@ -874,7 +874,7 @@ def cmd():
                 repo = arg.git_init
                 bare_repo = "%s/%s.git" % (CWD, repo)
                 directory = "%s/%s" % (CWD, repo)
-                _print(":: PROPEL GIT INIT BARE REPO ::")
+                _print(":: GIT INIT BARE REPO ::")
                 if git.init_bare_repo(repo):
                     git.update_post_receive_hook(repo, False)
                 _print("\n\t Git Repository: %s" % bare_repo)
@@ -904,8 +904,9 @@ def cmd():
         _print("")
 
         if app:
-            _print("-" * 80)
-            _print("* Propel Deployment Summary *")
+            _print("")
+            _print("=" * 80)
+            _print("* PROPEL Deployment Summary *")
             _print("")
             if app.virtualenv.get("name"):
                 _print("- Virtualenv: %s" % app.virtualenv.get("name"))
@@ -916,7 +917,7 @@ def cmd():
                     _print("\t Supervisor process name: %s" % i[0])
 
     except Exception as ex:
-        _print("Propel ERROR: %s " % ex.__repr__())
+        _print("PROPEL ERROR: %s " % ex.__repr__())
 
     _print("")
 
