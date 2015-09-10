@@ -875,7 +875,7 @@ def cmd():
                 if git.init_bare_repo(repo):
                     git.update_post_receive_hook(repo, False)
                 _print("\n\t Git Repository: %s" % bare_repo)
-                _print("\n\t Content Directory: %s" % directory)
+                _print("\n\t Content Directory: %s/" % directory)
                 _print("\n\t Add to git remote:")
                 _print("\t\t git remote add web ssh://user@host:%s" % bare_repo)
                 _print("\n\t To push:")
@@ -939,7 +939,8 @@ def setup_propel():
 # description: Supervisor Server
 # processname: supervisord
 
-. {INCLUDE_INIT_FUNCTIONS}
+. %s
+
 prog="supervisord"
 prefix="/usr/local"
 exec_prefix="${prefix}"
@@ -976,7 +977,7 @@ case "$1" in
     echo "Usage: $0 {start|stop|restart|status}"
   ;;
 esac
-""".format(INCLUDE_INIT_FUNCTIONS=get_dist_config("SUPERVISOR_INCLUDE_INIT_FUNCTIONS"))
+""" % get_dist_config("SUPERVISOR_INCLUDE_INIT_FUNCTIONS")
 
     MAINTENANCE_PAGE = """
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
