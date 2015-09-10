@@ -785,7 +785,7 @@ def cmd():
                 basedir = arg.dir
             projectname = arg.create.lower()
 
-            _print("> PROPEL CREATE NEW REPOSITORY: %s" % projectname)
+            _print("> PROPEL CREATE NEW REPOSITORY: %s \n" % projectname)
 
             if not os.path.isdir(basedir):
                 raise IOError("Base directory: '%s' doesn't exist")
