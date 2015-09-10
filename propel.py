@@ -45,7 +45,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.26.0"
+__version__ = "0.30.0"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Propel"
