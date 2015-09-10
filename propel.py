@@ -753,7 +753,7 @@ def cmd():
         parser.add_argument("--git-push-cmd", help="Setup Command to execute after git push. Put cmds within quotes"
                                                    "ie: [--git-push-cmd $name 'ls  -l' 'cd ']", nargs='*')
         parser.add_argument("--silent", help="Disable verbosity", action="store_true")
-        parser.add_argument("--ps",  help="Show all the supervisor processes", action="store_true")
+        parser.add_argument("--ps",  help="Show all the Supervisor processes", action="store_true")
 
         arg = parser.parse_args()
         VERBOSE = False if arg.silent else True
@@ -771,7 +771,8 @@ def cmd():
 
         # Show processes
         if arg.ps:
-            print(Supervisor.ctl("status", ""))
+            print("PROPEL: Supervisor processes")
+            Supervisor.ctl("status", "")
             exit()
 
         if arg.create:
