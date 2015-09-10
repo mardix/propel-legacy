@@ -870,10 +870,14 @@ def cmd():
             if arg.git_init:
                 repo = arg.git_init
                 bare_repo = "%s/%s.git" % (CWD, repo)
-                _print("> Creating Git Bare repo: %s ..." % bare_repo )
+                directory = "%s/%s" % (CWD, repo)
+                _print(":: PROPEL GIT INIT BARE REPO ::")
                 if git.init_bare_repo(repo):
                     git.update_post_receive_hook(repo, False)
-                _print("> To push: user@host:%s" % bare_repo)
+                _print("\n\t Git Repository: %s" % bare_repo)
+                _print("\n\t Content Directory: %s" % directory)
+                _print("\n\t To push: user@host:%s" % bare_repo)
+                _print("")
 
             if arg.git_push_web:
                 repo = arg.git_push_web
