@@ -45,7 +45,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.25.0-dev09"
+__version__ = "0.25.0-dev10"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Propel"
@@ -750,16 +750,14 @@ def cmd():
 
         parser.add_argument("-x", "--undeploy", help="To UNDEPLOY the application", action="store_true")
         parser.add_argument("-m", "--maintenance", help="Values: on|off - To set the site on maintenance. ie [--maintenance on]")
-
+        parser.add_argument("-c", "--create", help="Create a new application repository, set the git init for web push")
+        parser.add_argument("--basedir", help="The base directory when creating a new application. By default it's /home")
         parser.add_argument("--git-init", help="Setup a git bare repo $name to push content to. [--git-init $name]")
         parser.add_argument("--git-push-web", help="Set propel to deploy automatically when "
                                                    "push to the bare repo. [--git-push-web $name]")
         parser.add_argument("--git-push-cmd", help="Setup Command to execute after git push. Put cmds within quotes"
                                                    "ie: [--git-push-cmd $name 'ls  -l' 'cd ']", nargs='*')
         parser.add_argument("--silent", help="Disable verbosity", action="store_true")
-        parser.add_argument("-c", "--create", help="Create a new application directory, set the git init for web push")
-        parser.add_argument("--basedir", help="The base directory when creating a new application. By default it's /home")
-        parser.add_argument("--processes", help="Show Supervisor processes, which will include Propel's one", action="store_true")
 
         arg = parser.parse_args()
         VERBOSE = False if arg.silent else True
@@ -775,17 +773,13 @@ def cmd():
             print("")
             exit()
 
-        if arg.processes:
-            _print(run(SUPERVISOR_CTL, verbose=False))
-            exit()
-
         if arg.create:
             basedir = "/home"
             if arg.basedir:
                 basedir = arg.dir
             projectname = arg.create.lower()
 
-            _print("> PROPEL CREATE NEW APP: %s" % projectname)
+            _print("> PROPEL CREATE NEW REPOSITORY: %s" % projectname)
 
             if not os.path.isdir(basedir):
                 raise IOError("Base directory: '%s' doesn't exist")
