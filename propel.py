@@ -771,8 +771,9 @@ def cmd():
 
         # Show processes
         if arg.ps:
-            print("PROPEL: Supervisor processes")
+            print("PROPEL: Supervisor processes\n")
             Supervisor.ctl("status", "")
+            print("")
             exit()
 
         if arg.create:
