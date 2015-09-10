@@ -45,7 +45,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.25.1"
+__version__ = "0.26.0"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Propel"
@@ -93,7 +93,7 @@ DIST_CONF = {
 # SUPERVISOR
 SUPERVISOR_CTL = "/usr/local/bin/supervisorctl"
 SUPERVISOR_LOG_DIR = "/var/log/supervisor"
-SUPERVISOR_CONF_DIR = "/etc/supervisor"
+SUPERVISOR_CONF_DIR = "/etc/supervisor/conf.d"
 SUPERVISOR_TPL = """
 [program:{name}]
 command={command}

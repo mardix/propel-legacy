@@ -1,5 +1,11 @@
-- 0.25.1
+- 0.26.0
     - Refactoring
+    - backward incompatible.
+    - If upgrading,
+        need to rerun 'propel-setup'
+        stop all the processes 'propel -x' or manually
+        relaunch 'propel -w'
+
 
 - 0.25.0
     - Change the name of the supervisor app name
