@@ -45,7 +45,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.30.0"
+__version__ = "0.30.1"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Propel"
@@ -260,7 +260,7 @@ POST_RECEIVE_HOOK_CONFIG = """
 while read oldrev newrev refname
 do
     branch=$(git rev-parse --symbolic --abbrev-ref $refname)
-    if [ "master" == "$branch" ]; then
+    if [ "master" = "$branch" ]; then
         GIT_WORK_TREE={{ WORKING_DIR }} git checkout -f
         cd {{ WORKING_DIR }}
         {{ COMMAND }}

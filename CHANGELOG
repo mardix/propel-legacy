@@ -1,3 +1,6 @@
+- 0.30.1
+    - Change == to = in post-receive hook
+
 - 0.30.0
     - Refactoring
     - backward incompatible.
