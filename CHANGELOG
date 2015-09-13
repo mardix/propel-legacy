@@ -1,4 +1,5 @@
-- 0.30.1
+- 0.30.2
+    - In the propel Summary, fixed the supervisor process name
     - Change == to = in post-receive hook
 
 - 0.30.0

@@ -45,7 +45,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.30.1"
+__version__ = "0.30.2"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Propel"
@@ -914,7 +914,7 @@ def cmd():
                 for i in app.deployed_info:
                     _print("- Webapp: %s" % i[0])
                     _print("\t Gunicorn port: %s" % i[1])
-                    _print("\t Supervisor process name: %s" % i[0])
+                    _print("\t Supervisor process name: %s" % i[2])
 
     except Exception as ex:
         _print("PROPEL ERROR: %s " % ex.__repr__())
