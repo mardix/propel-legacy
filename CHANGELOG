@@ -1,3 +1,6 @@
+0.31.1
+     - fix maintenance bug
+
 0.31.0
     - Added new scripts hook:
         before_all,

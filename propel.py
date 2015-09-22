@@ -622,7 +622,7 @@ class App(object):
         if not is_on:
             self.deploy_web()
         elif undeploy_all:
-            self.deploy_web(undeploy=True)
+            self.deploy_web(maintenance=True)
             self.run_workers(undeploy=True)
         else:
             if "web" in self.config:
