@@ -45,7 +45,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.30.3"
+__version__ = "0.30.4"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Propel"
@@ -614,13 +614,16 @@ class App(object):
         else:
             raise TypeError("'web' is missing in propel.yml")
 
-    def maintenance(self, is_on=True):
+    def maintenance(self, is_on=True, undeploy_all=False):
         """
         Will put all the sites under maintenance
         To maintenance off, just deploy_web
         """
         if not is_on:
             self.deploy_web()
+        elif undeploy_all:
+            self.deploy_web(undeploy=True)
+            self.run_workers(undeploy=True)
         else:
             if "web" in self.config:
                 for site in self.config["web"]:
@@ -830,7 +833,7 @@ def cmd():
             # Global maintenance - maintenance["active"]= True only, ips must be empty
             _m = app.config.get("maintenance")
             if _m and _m.get("active") is True and not _m.get("allow_ips"):
-                app.maintenance()
+                app.maintenance(undeploy_all=True)
                 _print(":: GLOBAL MAINTENANCE ::")
                 _print("")
                 exit()
