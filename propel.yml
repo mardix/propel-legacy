@@ -60,31 +60,33 @@ web:
 # SCRIPTS: A dict of all scripts to execute
 scripts:
 
-  # PRE-WEB: scripts to run before web deployment
-  pre_web:
-    -
-      command: ""
-    -
-      command: "myscript.py"
-      directory: ""
+  # Run before all
+  before_all:
+    - command: "$PYTHON_ENV myscript.py"
 
-  # POST-WEB: scripts to run after web deployment
-  post_web:
-    -
-      command: ""
-    -
-      directory: ""
-      command: "$PYTHON_ENV myscript.py"
+  # Run after all
+  after_all:
+    - command: "$PYTHON_ENV myscript.py"
 
+  # run before web deployment
+  before_web:
+    - command: "$PYTHON_ENV myscript.py"
 
-  # UNDEPLOY: Will run this script when UNDEPLOYING
+  # run after web deployment
+  after_web:
+    - command: "$PYTHON_ENV myscript.py"
+
+  # run before web deployment
+  before_workers:
+    - command: "$PYTHON_ENV myscript.py"
+
+  # run after web deployment
+  after_workers:
+    - command: "$PYTHON_ENV myscript.py"
+
+  # run this script when UNDEPLOYING
   undeploy:
-    -
-      command: ""
-    -
-      directory: ""
-      command: "$PYTHON_ENV myscript.py"
-
+    - command: ""
 
   # MY_SCRIPT_NAME: Custom script by name
   my_script_name:
@@ -93,6 +95,7 @@ scripts:
     -
       directory: ""
       command: "$PYTHON_ENV myscript.py"
+
 
 
 # WORKERS: Run custom script or app in the background using supervisor

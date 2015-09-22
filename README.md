@@ -149,7 +149,7 @@ From there you can run the commands below:
 
 #### propel -w | --websites
 
-To deploy websites. It will also run scripts_pre_web and scripts_post_web
+To deploy websites. It will also run scripts.before_web and scripts.after_web
 
     propel -w
 
@@ -452,43 +452,30 @@ Scripts is a dict of with script name to execute. A script can contain multiple 
 Each command must have the `command` param, and optionally `directory` if the script is not being excuted from the same directory. When `directory` is provided, it will `cd` into it and run the `command`
 
     scripts:
-      -
-        command: "uname"
-      -
-        command: "ls -l"
-        directory: "/my-directory"        
-
-
-
-      # PRE-WEB: scripts to run before web deployment
-      pre_web:
-        -
-          command: "ls -l"
-        -
-          command: "myscript.py"
-          directory: ""
     
-      # POST-WEB: scripts to run after web deployment
-      post_web:
-        -
-          command: "uname"
-        -
-          directory: ""
-          command: "$PYTHON_ENV myscript.py"
+      # Run before all
+      before_all: 
+        - command: "$PYTHON_ENV myscript.py"
+        
+      # Run after all
+      after_all:
+        - command: "$PYTHON_ENV myscript.py"
+        
+      # run before web deployment
+      before_web:
+        - command: "$PYTHON_ENV myscript.py"
     
+      # run after web deployment
+      after_web:
+        - command: "$PYTHON_ENV myscript.py"
     
-      # UNDEPLOY: Will run this script when UNDEPLOYING
+      # run this script when UNDEPLOYING
       undeploy:
-        -
-          command: "time"
-        -
-          directory: ""
-          command: "$PYTHON_ENV myscript.py"
-    
+        - command: ""
     
       # MY_SCRIPT_NAME: Custom script by name
       my_script_name:
-        -
+        - 
           command: ""
         -
           directory: ""
@@ -500,7 +487,7 @@ And to run any of these scripts, you can just do:
     
 or multiple scripts:
     
-    propel -s my_script_name another_script 
+    propel -s my_script_name another_script after_all
     
     
 #### Scripts command with variables: $PYTHON_ENV and $LOCAL_BIN
@@ -527,20 +514,44 @@ The command above will execute the manage.py with the virtualenv python.
 - exclude: (bool) When True it will no run or rerun the worker
 
 
-#### PRE_WEB & POST_WEB
+#### BEFORE_ALL, AFTER_ALL, BEFORE_WEB, AFTER_WEB, BEFORE_WORKERS, AFTER_WORKERS
 
-`pre_web` and `post_web` are run before and after web deployment respectively, and follow the same rules as SCRIPTS above.
+Some pre-made hook to run before and after 
+
+`before_all`: Before setting up everything
+
+`after_all`: After setting up everything
+ 
+`before_web`: Before web deployment
+ 
+`after_web`: After web deployment
+ 
+`before_workers`: Before workers deployment
+ 
+`after_workers`: After workers deployment 
+
+
 
     scripts:
-        pre_web:
-          -
-            command: "$PYTHON_ENV myscript.py"
+        before_all:
+          - command: "$PYTHON_ENV myscript.py"
         
-        post_web:
-          -
-            command: "$PYTHON_ENV another-script.py"
+        after_all:
+          - command: "$PYTHON_ENV another-script.py"
+            
+        before_web:
+          - command: "$PYTHON_ENV myscript.py"
         
-
+        after_web:
+          - command: "$PYTHON_ENV another-script.py"
+       
+        before_workers:
+          - command: "$PYTHON_ENV myscript.py"
+        
+        after_workers:
+          - command: "$PYTHON_ENV myscript.py"
+    
+    
 #### UNDEPLOY
 
 `undeploy` will run when undeploying the application. It can be used to clean up etc when removing the site.

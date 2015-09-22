@@ -45,7 +45,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.30.4"
+__version__ = "0.31.0"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Propel"
@@ -854,18 +854,36 @@ def cmd():
                 pip_options = app.virtualenv.get("pip_options", "")
                 app.install_requirements(pip_options)
 
+            _print("> Running script before_all ...")
+            app.run_scripts("before_all")
+
             # Web
             if arg.websites:
                 _print(":: DEPLOY WEBSITES ::")
 
-                _print("> Running script pre_web ...")
-                app.run_scripts("pre_web")
+                _print("> Running script before_web ...")
+                app.run_scripts("before_web")
 
                 _print("> Deploying WEB ... ")
                 app.deploy_web()
 
-                _print("> Running script post_web ...")
-                app.run_scripts("post_web")
+                _print("> Running script after_web ...")
+                app.run_scripts("after_web")
+
+            # Workers
+            if arg.workers:
+                _print(":: RUN WORKERS ::")
+
+                _print("> Running script before_workers ...")
+                app.run_scripts("before_workers")
+
+                app.run_workers()
+
+                _print("> Running script after_workers ...")
+                app.run_scripts("after_workers")
+
+            _print("> Running script after_all ...")
+            app.run_scripts("after_all")
 
             # Scripts
             if arg.scripts:
@@ -873,11 +891,6 @@ def cmd():
                 for name in arg.scripts:
                     _print("> Scripts: %s ..." % name)
                     app.run_scripts(name)
-
-            # Workers
-            if arg.workers:
-                _print(":: RUN WORKERS ::")
-                app.run_workers()
 
         # Extra
         else:

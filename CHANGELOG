@@ -1,3 +1,12 @@
+0.31.0
+    - Added new scripts hook:
+        before_all,
+        after_all,
+        before_web,
+        after_web,
+        before_workers,
+        after_workers
+
 0.30.4
     - In propel.py, If only maintenance.active is True, will put down everything
 
