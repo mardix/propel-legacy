@@ -45,7 +45,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.30.2"
+__version__ = "0.30.3"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Propel"
@@ -741,7 +741,7 @@ def cmd():
         parser.add_argument("-s", "--scripts", help="Run script by specifying name:"
                                                     " ie: [-s pre_web post_web other_one]", nargs='*')
         parser.add_argument("-k", "--workers", help="Run Workers", action="store_true")
-        parser.add_argument("--reload-server", help="To reload the servers", action="store_true")
+        parser.add_argument("-r", "--reload-server", help="To reload the servers", action="store_true")
 
         parser.add_argument("-x", "--undeploy", help="To UNDEPLOY the application", action="store_true")
         parser.add_argument("-m", "--maintenance", help="Values: on|off - To set the site on maintenance. ie [--maintenance on]")
@@ -826,6 +826,14 @@ def cmd():
         # Deploy: Websites, scripts, workers may require a virtualenv
         elif arg.websites or arg.scripts or arg.workers:
             app = App(CWD)
+
+            # Global maintenance - maintenance["active"]= True only, ips must be empty
+            _m = app.config.get("maintenance")
+            if _m and _m.get("active") is True and not _m.get("allow_ips"):
+                app.maintenance()
+                _print(":: GLOBAL MAINTENANCE ::")
+                _print("")
+                exit()
 
             # Auto maintenance before doing any web deployment
             if arg.websites:

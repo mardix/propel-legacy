@@ -1,3 +1,6 @@
+0.30.3
+    - In propel.py, If only maintenance.active is True, will put down everything
+
 - 0.30.2
     - In the propel Summary, fixed the supervisor process name
     - Change == to = in post-receive hook
