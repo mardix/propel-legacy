@@ -45,7 +45,7 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.31.0"
+__version__ = "0.31.2"
 __author__ = "Mardix"
 __license__ = "MIT"
 __NAME__ = "Propel"
@@ -56,6 +56,7 @@ CWD = os.getcwd()
 
 NGINX_DEFAULT_PORT = 80
 GUNICORN_PORT_RANGE = [8000, 9000]  # Port range for gunicorn proxy
+GUNICORN_DEFAULT_THREADS = 4
 GUNICORN_DEFAULT_MAX_REQUESTS = 500
 GUNICORN_DEFAULT_WORKER_CLASS = "gevent"
 
@@ -526,7 +527,7 @@ class App(object):
                 name = site.get("name")
                 directory = self.directory
                 nginx = site.get("nginx", {})
-                gunicorn_option = site.get("gunicorn", {})
+                gunicorn_options = site.get("gunicorn", {})
                 application = site.get("application", None)
                 environment = site.get("environment", None)
                 user = site.get("user", "root")
@@ -552,13 +553,12 @@ class App(object):
                     proxy_port = generate_random_port()
                     default_gunicorn = {
                         "workers": (multiprocessing.cpu_count() * 2) + 1,
-                        "threads": 4,
+                        "threads": GUNICORN_DEFAULT_THREADS,
                         "max-requests": GUNICORN_DEFAULT_MAX_REQUESTS,
                         "worker-class": GUNICORN_DEFAULT_WORKER_CLASS
                     }
-                    gunicorn_option.update(default_gunicorn)
-
-                    settings = " ".join(["--%s %s" % (x[0], x[1]) for x in gunicorn_option.items()])
+                    [gunicorn_options.setdefault(k, v) for k, v in default_gunicorn.items()]
+                    settings = " ".join(["--%s %s" % (x[0], x[1]) for x in gunicorn_options.items()])
                     gunicorn_bin = get_venv_bin(bin_program="gunicorn", virtualenv=self.virtualenv.get("name"))
 
                     # Site not under maintenance,
