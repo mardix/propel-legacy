@@ -782,7 +782,7 @@ def cmd():
         if arg.create:
             basedir = "/home"
             if arg.basedir:
-                basedir = arg.dir
+                basedir = arg.basedir
             projectname = arg.create.lower()
 
             _print("> CREATE NEW REPOSITORY : %s \n" % projectname)
