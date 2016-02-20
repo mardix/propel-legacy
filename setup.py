@@ -1,13 +1,21 @@
 """
-propel
+Propel
+
+Propel is a package to deploy multiple Python sites/application in virtualenv.
+
+It also allows you to deploy PHP/HTML applications, run scripts and run workers with Supervisor.
+
+For Python application, it uses Virtualenv to isolate each application, Gunicorn+Gevent as the backend server,
+Supervisor and Nginx.
+
+For PHP/HTML sites, it just uses the path as it would in normal environment, and you must have php-fpm
+
 """
 
 from setuptools import setup
 
-from propel import propel
 from propel.__about__ import *
 
-PACKAGE = propel
 
 setup(
     name=__title__,
@@ -16,7 +24,7 @@ setup(
     author=__author__,
     author_email=__email__,
     description=__summary__,
-    long_description=PACKAGE.__doc__,
+    long_description=__doc__,
     url=__uri__,
     download_url='http://github.com/mardix/propel/tarball/master',
     py_modules=['propel'],
