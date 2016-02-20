@@ -14,7 +14,7 @@ For PHP/HTML sites, it just uses the path as it would in normal environment, and
 
 from setuptools import setup
 
-import about
+from __about__ import *
 
 
 setup(
