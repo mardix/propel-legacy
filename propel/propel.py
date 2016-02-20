@@ -459,7 +459,7 @@ class Supervisor(object):
         """
         To restart supervisor
         """
-        cls.ctl("restart", "")
+        cls.ctl("restart", "all")
 
 class Git(object):
     def __init__(self, directory):
