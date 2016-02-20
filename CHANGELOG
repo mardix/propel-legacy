@@ -1,4 +1,4 @@
-0.42.0
+0.43.0
     - workers are now k/v of dict workers
 
     - Workers now must be called with a worker name
