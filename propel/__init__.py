@@ -24,18 +24,19 @@ Requirements:
 
 """
 
-import os
-import sys
-import datetime
-import subprocess
-import multiprocessing
-import socket
-import random
 import argparse
-import shutil
-import platform
+import datetime
 import getpass
-from __about__ import *
+import multiprocessing
+import os
+import platform
+import random
+import shutil
+import socket
+import subprocess
+import sys
+
+from propel.__about__ import *
 
 try:
     import yaml
@@ -304,7 +305,7 @@ def get_venv_bin(bin_program=None, virtualenv=None):
     Get the bin path of a virtualenv program
     """
     bin = (VIRTUALENV_DIRECTORY + "/%s/bin") % virtualenv if virtualenv else LOCAL_BIN
-    return (bin + "/%s") % bin_program if bin_program else bin 
+    return (bin + "/%s") % bin_program if bin_program else bin
 
 def is_port_open(port, host="127.0.0.1"):
     try:
@@ -745,7 +746,7 @@ def cmd():
         global VIRTUALENV_DIRECTORY
         global VERBOSE
 
-        parser = argparse.ArgumentParser(description="%s %s" % (__NAME__, __version__))
+        parser = argparse.ArgumentParser(description="%s %s" % (__title__, __version__))
         parser.add_argument("-w", "--websites", help="Deploy all sites", action="store_true")
         parser.add_argument("-s", "--scripts", help="Run script by specifying name:"
                                                     " ie: [-s pre_web post_web other_one]", nargs='*')
@@ -1014,7 +1015,7 @@ def setup_propel():
 
     install_programs = get_dist_config("INSTALL_PROGRAMS")
     run("sudo %s -y install %s" % (_apt_get, " ".join(install_programs)))
-    
+
     run("echo_supervisord_conf > %s" % conf_file)
     with open(conf_file, "a") as f:
         lines = "\n[include]\n"

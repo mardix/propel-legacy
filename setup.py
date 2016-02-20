@@ -3,8 +3,9 @@ propel
 """
 
 from setuptools import setup
-import propel
-from __about__ import *
+
+from propel import propel
+from propel.__about__ import *
 
 PACKAGE = propel
 
