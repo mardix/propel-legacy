@@ -4,18 +4,19 @@ propel
 
 from setuptools import setup
 import propel
+from __about__ import *
 
 PACKAGE = propel
 
 setup(
-    name=PACKAGE.__NAME__,
-    version=PACKAGE.__version__,
-    license=PACKAGE.__license__,
-    author=PACKAGE.__author__,
-    author_email='mardix@pylot.io',
-    description="A package to deploy sites in virtualenv, run scripts, and deploy workers with supervisor",
+    name=__title__,
+    version=__version__,
+    license=__license__,
+    author=__author__,
+    author_email=__email__,
+    description=__summary__,
     long_description=PACKAGE.__doc__,
-    url='http://github.com/mardix/propel/',
+    url=__uri__,
     download_url='http://github.com/mardix/propel/tarball/master',
     py_modules=['propel'],
     entry_points=dict(console_scripts=['propel=propel:cmd',

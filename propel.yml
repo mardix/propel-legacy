@@ -58,30 +58,31 @@ web:
       root_dir: "html"
 
 # SCRIPTS: A dict of all scripts to execute
+
 scripts:
 
   # Run before all
-  before_all:
+  before-all:
     - command: "$PYTHON_ENV myscript.py"
 
   # Run after all
-  after_all:
+  after-all:
     - command: "$PYTHON_ENV myscript.py"
 
   # run before web deployment
-  before_web:
+  before-web:
     - command: "$PYTHON_ENV myscript.py"
 
   # run after web deployment
-  after_web:
+  after-web:
     - command: "$PYTHON_ENV myscript.py"
 
   # run before web deployment
-  before_workers:
+  before-workers:
     - command: "$PYTHON_ENV myscript.py"
 
   # run after web deployment
-  after_workers:
+  after-workers:
     - command: "$PYTHON_ENV myscript.py"
 
   # run this script when UNDEPLOYING
@@ -100,17 +101,27 @@ scripts:
 
 # WORKERS: Run custom script or app in the background using supervisor
 workers:
-  -
-    name: "myworker1"
-    command: "$PYTHON_ENV myyworker1.py
-    environment: ""
-  -
-    name: "myworker2"
-    directory: ""
-    command: "$PYTHON_ENV myyworker2.py"
-    environment: ""
-    user: ""
-    exclude: True  # Prevent this worker from rerunning
+
+  # To run this: propel -k managers
+  managers:
+    -
+      name: "manager1"
+      command: "$PYTHON_ENV trigger.py
+      environment: ""
+
+  # To run this: propel -k jobs
+  jobs:
+    -
+      name: "myworker1"
+      command: "$PYTHON_ENV myyworker1.py
+      environment: ""
+    -
+      name: "myworker2"
+      directory: ""
+      command: "$PYTHON_ENV myyworker2.py"
+      environment: ""
+      user: ""
+      exclude: True  # Prevent this worker from rerunning
 
 
 # MAINTENANCE: To turn on/off maintenance programmatically

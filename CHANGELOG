@@ -1,3 +1,16 @@
+0.40.0
+    - Workers should be called with the worker key
+
+    - Rename scripts hook:
+        before-all,
+        after-all,
+        before-web,
+        after-web,
+        before-workers,
+        after-workers
+
+    - backwards incompatibility
+
 0.31.2
     - Fix Gunicorn options
 

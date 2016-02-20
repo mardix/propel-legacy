@@ -35,6 +35,7 @@ import argparse
 import shutil
 import platform
 import getpass
+from __about__ import *
 
 try:
     import yaml
@@ -45,10 +46,6 @@ try:
 except ImportError as ex:
     print("Jinja2 is missing. pip install jinja2")
 
-__version__ = "0.31.2"
-__author__ = "Mardix"
-__license__ = "MIT"
-__NAME__ = "Propel"
 
 PY_EXECUTABLE = sys.executable
 PY_USER = getpass.getuser()
@@ -681,9 +678,18 @@ class App(object):
                                          directory=directory)
                 runvenv("cd %s; %s" % (directory, command), virtualenv=self.virtualenv.get("name"))
 
-    def run_workers(self, undeploy=False):
+    def run_workers(self, name=None, undeploy=False):
+
         if "workers" in self.config:
-            for worker in self.config["workers"]:
+            if undeploy and name is None:
+                workers = [v for _, v in self.config["workers"].items()]
+            else:
+                if name in self.config["workers"]:
+                    workers = self.config["workers"][name]
+                else:
+                    raise TypeError("Missing worker: %s" % name)
+
+            for worker in workers:
                 if "name" not in worker:
                     raise TypeError("'name' is missing in workers")
                 if "command" not in worker:
@@ -743,7 +749,7 @@ def cmd():
         parser.add_argument("-w", "--websites", help="Deploy all sites", action="store_true")
         parser.add_argument("-s", "--scripts", help="Run script by specifying name:"
                                                     " ie: [-s pre_web post_web other_one]", nargs='*')
-        parser.add_argument("-k", "--workers", help="Run Workers", action="store_true")
+        parser.add_argument("-k", "--workers", help="Run Workers by specifying name: ie [-k tasks othername]", nargs='*')
         parser.add_argument("-r", "--reload-server", help="To reload the servers", action="store_true")
 
         parser.add_argument("-x", "--undeploy", help="To UNDEPLOY the application", action="store_true")
@@ -854,36 +860,38 @@ def cmd():
                 pip_options = app.virtualenv.get("pip_options", "")
                 app.install_requirements(pip_options)
 
-            _print("> Running script before_all ...")
-            app.run_scripts("before_all")
+            _print("> Running script 'before-all' ...")
+            app.run_scripts("before-all")
 
             # Web
             if arg.websites:
                 _print(":: DEPLOY WEBSITES ::")
 
-                _print("> Running script before_web ...")
-                app.run_scripts("before_web")
+                _print("> Running script 'before-web' ...")
+                app.run_scripts("before-web")
 
                 _print("> Deploying WEB ... ")
                 app.deploy_web()
 
-                _print("> Running script after_web ...")
-                app.run_scripts("after_web")
+                _print("> Running script 'after-web' ...")
+                app.run_scripts("after-web")
 
             # Workers
             if arg.workers:
                 _print(":: RUN WORKERS ::")
 
-                _print("> Running script before_workers ...")
-                app.run_scripts("before_workers")
+                _print("> Running script 'before-workers' ...")
+                app.run_scripts("before-workers")
 
-                app.run_workers()
+                for name in arg.workers:
+                    _print("> Worker: %s ..." % name)
+                    app.run_workers(name)
 
-                _print("> Running script after_workers ...")
-                app.run_scripts("after_workers")
+                _print("> Running script 'after-workers' ...")
+                app.run_scripts("after-workers")
 
-            _print("> Running script after_all ...")
-            app.run_scripts("after_all")
+            _print("> Running script 'after-all' ...")
+            app.run_scripts("after-all")
 
             # Scripts
             if arg.scripts:

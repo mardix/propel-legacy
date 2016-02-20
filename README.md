@@ -514,41 +514,41 @@ The command above will execute the manage.py with the virtualenv python.
 - exclude: (bool) When True it will no run or rerun the worker
 
 
-#### BEFORE_ALL, AFTER_ALL, BEFORE_WEB, AFTER_WEB, BEFORE_WORKERS, AFTER_WORKERS
+#### BEFORE-ALL, AFTER-ALL, BEFORE-WEB, AFTER-WEB, BEFORE-WORKERS, AFTER-WORKERS
 
 Some pre-made hook to run before and after 
 
-`before_all`: Before setting up everything
+`before-all`: Before setting up everything
 
-`after_all`: After setting up everything
+`after-all`: After setting up everything
  
-`before_web`: Before web deployment
+`before-web`: Before web deployment
  
-`after_web`: After web deployment
+`after-web`: After web deployment
  
-`before_workers`: Before workers deployment
+`before-workers`: Before workers deployment
  
-`after_workers`: After workers deployment 
+`after-workers`: After workers deployment 
 
 
 
     scripts:
-        before_all:
+        before-all:
           - command: "$PYTHON_ENV myscript.py"
         
-        after_all:
+        after-all:
           - command: "$PYTHON_ENV another-script.py"
             
-        before_web:
+        before-web:
           - command: "$PYTHON_ENV myscript.py"
         
-        after_web:
+        after-web:
           - command: "$PYTHON_ENV another-script.py"
        
-        before_workers:
+        before-workers:
           - command: "$PYTHON_ENV myscript.py"
         
-        after_workers:
+        after-workers:
           - command: "$PYTHON_ENV myscript.py"
     
     
@@ -568,10 +568,10 @@ ie: `propel --undeploy`
 You can setup your custom scripts to be run manually.
 
 `$script_name` (with $script_name being the name of the script). It will be run when called manually. 
-ie: `propel -s setup_cron`
+ie: `propel -s setup-cron`
 
     scripts:
-      setup_cron:
+      setup-cron:
         -
           directory: ""
           command: "mysetup_cron_script"
@@ -581,22 +581,31 @@ ie: `propel -s setup_cron`
 
 ## WORKERS
 
-Workers are scripts that are run continuously in the background and are monitored by `Supervisor`. Workers can perform whatever task you assign them to do. 
+Workers are scripts to run continuously in the background via `Supervisor`. 
 
-`workers` is a list of dict of command to run with Supervisor.
+`workers` contains a dict of tasks grouped by name, which contain the work to execute.
 
 
-    workers:
-      - 
-        name: "myworkername"
-        command: "$PYTHON_ENV myworker.py"
-      -
-        name: "anotherworker"
-        directory: ""
-        command: "$PYTHON_ENV myotherworker.py"
-        user: "www-data"
-        environement: ""
-        exclude: True 
+      # To run this: propel -k managers
+      managers:
+        -
+          name: "manager1"
+          command: "$PYTHON_ENV trigger.py
+          environment: ""
+    
+      # To run this: propel -k jobs
+      jobs:
+        -
+          name: "myworker1"
+          command: "$PYTHON_ENV myyworker1.py
+          environment: ""
+        -
+          name: "myworker2"
+          directory: ""
+          command: "$PYTHON_ENV myyworker2.py"
+          environment: ""
+          user: ""
+          exclude: True  # Prevent this worker from rerunning
 
 
 **Config description**
