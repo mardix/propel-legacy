@@ -36,7 +36,7 @@ import socket
 import subprocess
 import sys
 
-from propel.__about__ import *
+from __about__ import *
 
 try:
     import yaml
