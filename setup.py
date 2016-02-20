@@ -28,8 +28,8 @@ setup(
     url=__uri__,
     download_url='http://github.com/mardix/propel/tarball/master',
     py_modules=['propel'],
-    entry_points=dict(console_scripts=['propel=propel:cmd',
-                                       'propel-setup=propel:setup_propel']),
+    entry_points=dict(console_scripts=['propel=propel.__init__:cmd',
+                                       'propel-setup=propel.__init__:setup_propel']),
     install_requires=[
         'jinja2==2.7.3',
         'pyyaml==3.11',
