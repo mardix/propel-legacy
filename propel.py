@@ -746,7 +746,7 @@ def cmd():
         global VIRTUALENV_DIRECTORY
         global VERBOSE
 
-        parser = argparse.ArgumentParser(description="%s %s" % (__title__, __version__))
+        parser = argparse.ArgumentParser(description="Propel")
         parser.add_argument("-w", "--websites", help="Deploy all sites", action="store_true")
         parser.add_argument("-s", "--scripts", help="Run script by specifying name:"
                                                     " ie: [-s pre_web post_web other_one]", nargs='*')
@@ -769,7 +769,7 @@ def cmd():
         VERBOSE = False if arg.silent else True
 
         _print("-" * 80)
-        _print("PROPEL %s" % __version__)
+        _print("Propel")
         _print("")
 
         # Supervisor test
