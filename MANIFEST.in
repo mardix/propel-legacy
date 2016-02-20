@@ -1,2 +1,1 @@
 include *.py *.txt *.md CHANGELOG
-recursive-include propel *

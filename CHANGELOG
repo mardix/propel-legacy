@@ -1,15 +1,13 @@
-0.40.0
-    - Workers should be called with the worker key
+0.41.0
+    - workers are now k/v of dict workers
 
-    - Rename scripts hook:
-        before-all,
-        after-all,
-        before-web,
-        after-web,
-        before-workers,
-        after-workers
+    - Workers now must be called with a worker name
 
-    - backwards incompatibility
+    - backwards incompatibility on workers
+
+    - change name --reload_server to --reload, but using -r is still ok
+
+    - Added --restart to restart Supervisor
 
 0.31.2
     - Fix Gunicorn options

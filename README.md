@@ -83,9 +83,6 @@ Propel also has a maintenance mode that will display a maintenance page when the
 website is down for maintenance or is being deployed.
 
 
-
-
-
 #### - Packages 
 
 Propel makes use of the following packages:
@@ -166,11 +163,11 @@ Run multiple scripts
     propel --scripts my_script_name another_script a_third_script
     
     
-#### propel -k | --workers
+#### propel -k | --workers [name, [names ...]]
 
 To run workers in the background using Supervisor
 
-    propel --workers
+    propel --workers worker_name another_name
 
 
 ### propel -x | --undeploy
@@ -201,13 +198,25 @@ To create a new application bare repository ready to push application to.
     propel -c mynewapp --basedir=/myother-dir 
     
     
+### propel -r | --reload
+
+To reload Nginx servers and refresh Supervisors config
+
+    propel --reload
+
 ### propel --ps
 
 To list all the running applications. Running applications are active apps on Supervisor.
 
     propel -ps
+    
+    
+### propel --restart
 
+To completely restart all Supervisors processes
 
+    propel --restart
+    
 ---
 
 # propel.yml
@@ -514,41 +523,41 @@ The command above will execute the manage.py with the virtualenv python.
 - exclude: (bool) When True it will no run or rerun the worker
 
 
-#### BEFORE-ALL, AFTER-ALL, BEFORE-WEB, AFTER-WEB, BEFORE-WORKERS, AFTER-WORKERS
+#### before_all, after_all, before_web, after_web, before_workers, after_workers
 
 Some pre-made hook to run before and after 
 
-`before-all`: Before setting up everything
+`before_all`: Before setting up everything
 
-`after-all`: After setting up everything
+`after_all`: After setting up everything
  
-`before-web`: Before web deployment
+`before_web`: Before web deployment
  
-`after-web`: After web deployment
+`after_web`: After web deployment
  
-`before-workers`: Before workers deployment
+`before_workers`: Before workers deployment
  
-`after-workers`: After workers deployment 
+`after_workers`: After workers deployment 
 
 
 
     scripts:
-        before-all:
+        before_all:
           - command: "$PYTHON_ENV myscript.py"
         
-        after-all:
+        after_all:
           - command: "$PYTHON_ENV another-script.py"
             
-        before-web:
+        before_web:
           - command: "$PYTHON_ENV myscript.py"
         
-        after-web:
+        after_web:
           - command: "$PYTHON_ENV another-script.py"
        
-        before-workers:
+        before_workers:
           - command: "$PYTHON_ENV myscript.py"
         
-        after-workers:
+        after_workers:
           - command: "$PYTHON_ENV myscript.py"
     
     
@@ -568,10 +577,11 @@ ie: `propel --undeploy`
 You can setup your custom scripts to be run manually.
 
 `$script_name` (with $script_name being the name of the script). It will be run when called manually. 
-ie: `propel -s setup-cron`
+
+ie: `propel -s setup_cron`
 
     scripts:
-      setup-cron:
+      setup_cron:
         -
           directory: ""
           command: "mysetup_cron_script"
@@ -581,7 +591,7 @@ ie: `propel -s setup-cron`
 
 ## WORKERS
 
-Workers are scripts to run continuously in the background via `Supervisor`. 
+Workers (just like Scripts) are scripts to run continuously in the background via `Supervisor`. 
 
 `workers` contains a dict of tasks grouped by name, which contain the work to execute.
 

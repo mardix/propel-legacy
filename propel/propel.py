@@ -454,6 +454,13 @@ class Supervisor(object):
         cls.ctl("reread", "")
         cls.ctl("update", "")
 
+    @classmethod
+    def restart(cls):
+        """
+        To restart supervisor
+        """
+        cls.ctl("restart", "")
+
 class Git(object):
     def __init__(self, directory):
         self.directory = directory
@@ -746,30 +753,31 @@ def cmd():
         global VIRTUALENV_DIRECTORY
         global VERBOSE
 
-        parser = argparse.ArgumentParser(description="Propel")
+        parser = argparse.ArgumentParser(description="%s %s" % (__title__, __version__))
         parser.add_argument("-w", "--websites", help="Deploy all sites", action="store_true")
         parser.add_argument("-s", "--scripts", help="Run script by specifying name:"
                                                     " ie: [-s pre_web post_web other_one]", nargs='*')
-        parser.add_argument("-k", "--workers", help="Run Workers by specifying name: ie [-k tasks othername]", nargs='*')
-        parser.add_argument("-r", "--reload-server", help="To reload the servers", action="store_true")
-
+        parser.add_argument("-k", "--workers", help="Run Workers by specifying name: ie [-k tasks othertasks]", nargs='*')
+        parser.add_argument("-r", "--reload", help="To refresh the servers", action="store_true")
         parser.add_argument("-x", "--undeploy", help="To UNDEPLOY the application", action="store_true")
         parser.add_argument("-m", "--maintenance", help="Values: on|off - To set the site on maintenance. ie [--maintenance on]")
         parser.add_argument("-c", "--create", help="Create a new application repository, set the git init for web push")
         parser.add_argument("--basedir", help="The base directory when creating a new application. By default it's /home")
+        parser.add_argument("--silent", help="Disable verbosity", action="store_true")
+        parser.add_argument("--ps",  help="Show all the Supervisor processes", action="store_true")
+        parser.add_argument("--restart",  help="Restart all managed Supervisor processes", action="store_true")
+
         parser.add_argument("--git-init", help="Setup a git bare repo $name to push content to. [--git-init $name]")
         parser.add_argument("--git-push-web", help="Set propel to deploy automatically when "
                                                    "push to the bare repo. [--git-push-web $name]")
         parser.add_argument("--git-push-cmd", help="Setup Command to execute after git push. Put cmds within quotes"
                                                    "ie: [--git-push-cmd $name 'ls  -l' 'cd ']", nargs='*')
-        parser.add_argument("--silent", help="Disable verbosity", action="store_true")
-        parser.add_argument("--ps",  help="Show all the Supervisor processes", action="store_true")
 
         arg = parser.parse_args()
         VERBOSE = False if arg.silent else True
 
         _print("-" * 80)
-        _print("Propel")
+        _print("%s %s" % (__title__, __version__))
         _print("")
 
         # Supervisor test
@@ -833,6 +841,10 @@ def cmd():
             app.run_scripts("undeploy")
             app.destroy_virtualenv()
 
+        if arg.restart:
+            _print("Restarting all processes...")
+            Supervisor.restart()
+
         # Deploy: Websites, scripts, workers may require a virtualenv
         elif arg.websites or arg.scripts or arg.workers:
             app = App(CWD)
@@ -861,8 +873,8 @@ def cmd():
                 pip_options = app.virtualenv.get("pip_options", "")
                 app.install_requirements(pip_options)
 
-            _print("> Running script 'before-all' ...")
-            app.run_scripts("before-all")
+            _print("> Running script 'before_all' ...")
+            app.run_scripts("before_all")
 
             # Web
             if arg.websites:
@@ -874,25 +886,25 @@ def cmd():
                 _print("> Deploying WEB ... ")
                 app.deploy_web()
 
-                _print("> Running script 'after-web' ...")
-                app.run_scripts("after-web")
+                _print("> Running script 'after_web' ...")
+                app.run_scripts("after_web")
 
             # Workers
             if arg.workers:
                 _print(":: RUN WORKERS ::")
 
-                _print("> Running script 'before-workers' ...")
-                app.run_scripts("before-workers")
+                _print("> Running script 'before_workers' ...")
+                app.run_scripts("before_workers")
 
                 for name in arg.workers:
                     _print("> Worker: %s ..." % name)
                     app.run_workers(name)
 
-                _print("> Running script 'after-workers' ...")
-                app.run_scripts("after-workers")
+                _print("> Running script 'after_workers' ...")
+                app.run_scripts("after_workers")
 
-            _print("> Running script 'after-all' ...")
-            app.run_scripts("after-all")
+            _print("> Running script 'after_all' ...")
+            app.run_scripts("after_all")
 
             # Scripts
             if arg.scripts:
@@ -930,8 +942,8 @@ def cmd():
                 _print("> Setting custom CMD on git push ...")
                 git.update_post_receive_hook(repo, cmds)
 
-            if arg.reload_server:
-                _print("> Reloading server ...")
+            if arg.reload:
+                _print("> Refresh server ...")
                 reload_server()
         _print("Completed!")
         _print("")

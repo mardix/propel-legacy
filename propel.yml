@@ -62,27 +62,27 @@ web:
 scripts:
 
   # Run before all
-  before-all:
+  before_all:
     - command: "$PYTHON_ENV myscript.py"
 
   # Run after all
-  after-all:
+  after_all:
     - command: "$PYTHON_ENV myscript.py"
 
   # run before web deployment
-  before-web:
+  before_web:
     - command: "$PYTHON_ENV myscript.py"
 
   # run after web deployment
-  after-web:
+  after_web:
     - command: "$PYTHON_ENV myscript.py"
 
   # run before web deployment
-  before-workers:
+  before_workers:
     - command: "$PYTHON_ENV myscript.py"
 
   # run after web deployment
-  after-workers:
+  after_workers:
     - command: "$PYTHON_ENV myscript.py"
 
   # run this script when UNDEPLOYING
