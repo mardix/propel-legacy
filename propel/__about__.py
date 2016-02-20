@@ -8,7 +8,7 @@ __all__ = [
 
 
 __title__ = "Propel"
-__version__ = "0.40.4"
+__version__ = "0.40.5"
 __summary__ = "A package to deploy sites in virtualenv, run scripts, and deploy workers with supervisor"
 __uri__ = "http://github.com/mardix/propel/"
 __author__ = "Mardix"
