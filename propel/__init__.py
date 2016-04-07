@@ -772,7 +772,7 @@ def cmd():
                                                    "push to the bare repo. [--git-push-web $name]")
         parser.add_argument("--git-push-cmd", help="Setup Command to execute after git push. Put cmds within quotes"
                                                    "ie: [--git-push-cmd $name 'ls  -l' 'cd ']", nargs='*')
-
+        parser.add_argument("--debug", help="To output the full error stack in", action="store_true")
         arg = parser.parse_args()
         VERBOSE = False if arg.silent else True
 
@@ -880,8 +880,8 @@ def cmd():
             if arg.websites:
                 _print(":: DEPLOY WEBSITES ::")
 
-                _print("> Running script 'before-web' ...")
-                app.run_scripts("before-web")
+                _print("> Running script 'before_web' ...")
+                app.run_scripts("before_web")
 
                 _print("> Deploying WEB ... ")
                 app.deploy_web()
@@ -962,7 +962,10 @@ def cmd():
                     _print("\t Supervisor process name: %s" % i[2])
 
     except Exception as ex:
-        _print("PROPEL ERROR: %s " % ex.__repr__())
+        if arg.debug:
+            raise ex
+        else:
+            _print("PROPEL ERROR: %s " % ex.__repr__())
 
     _print("")
 

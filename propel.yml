@@ -1,28 +1,29 @@
-
+################################################################################
+#                                   Propel
 # Propel
 # Config file
 # propel -w
+################################################################################
 
 ---
 # Virtualenv
 virtualenv:
   name: ""  # The name of the virtualenv. Required for python web/workers
-  directory: "" # The directory of the virtualenvs, by default it's /root/.virtualenvs
-  rebuild: ""  # (bool) To rebuild
+  directory: ""  # The directory of the virtualenvs, by default it's /root/.virtualenvs
+  rebuild: ""   # (bool) To rebuild
   pip_options: "" # options for pip, ie: --process-dependency-links --upgrade
 
 # WEB: list of dict of web sites/application to deploy
 web:
   -
-
-    name: "mysite.com" # The site name
-    application: "run_mysite:flask_app" # for python application
-    environment: ""  # A list of key/value pairs in the form KEY="val",KEY2="val2" that will be placed in the supervisord process’ environment
+    name: "mysite.com"  # The site name
+    application: "run_mysite:flask_app"  # for python application
+    environment: ""   # A list of key/value pairs in the form KEY="val",KEY2="val2" that will be placed in the supervisord process’ environment
 
     # Nginx related config
     nginx:
       port: 80
-      server_name: "mysite.com" # Optional if the server name is different than name, or has multiple server_name
+      server_name: "mysite.com"  # Optional if the server name is different than name, or has multiple server_name
       logs_dir: ""
       root_dir: ""
       aliases:
@@ -61,7 +62,7 @@ web:
 
 scripts:
 
-  # Run before all
+  # Script to run before
   before_all:
     - command: "$PYTHON_ENV myscript.py"
 
