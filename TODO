@@ -1,0 +1,12 @@
+TODO
+
+- Deploy by app name
+    `propel --app myappname`
+    `propel -w` will still mean all sites
+
+- NO DOWN TIME FOR WEB DEPLOYMENT (not PHP, not HTML):
+    Retrieve the active port of the current process from NGINX
+    Keep the current process up
+    Create a new process without creating a new nginx
+    When new process is active, kill previous process and replace port
+
