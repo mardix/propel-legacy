@@ -1,51 +1,87 @@
 ################################################################################
 #                                   Propel
-# Propel
+#
+# Propel is tool that help you deploy site
+#
 # Config file
-# propel -w
+# propel --all-webs  to deploy all sited
+# or
+# propel -w mysite.com
 ################################################################################
 
 ---
-# Virtualenv
+# VIRTUALENV
 virtualenv:
-  name: ""  # The name of the virtualenv. Required for python web/workers
-  directory: ""  # The directory of the virtualenvs, by default it's /root/.virtualenvs
-  rebuild: ""   # (bool) To rebuild
-  pip_options: "" # options for pip, ie: --process-dependency-links --upgrade
 
-# WEB: list of dict of web sites/application to deploy
+  # The name of the virtualenv. Required for python web/workers
+  name: ""
+
+  # The directory of the virtualenvs, by default it's /root/.virtualenvs
+  directory: ""
+
+   # (bool) if True, it will rebuild the virtualenv
+  rebuild: ""
+
+  # Add extra options for pip, ie: --process-dependency-links --upgrade
+  pip_options: ""
+
+
+# WEB:
+# list of dict of web sites/application to deploy
+# Site can be launched individually: [ --websites [site1.com site.com ...]]
 web:
   -
-    name: "mysite.com"  # The site name
-    application: "run_mysite:flask_app"  # for python application
-    environment: ""   # A list of key/value pairs in the form KEY="val",KEY2="val2" that will be placed in the supervisord process’ environment
+    # The site name
+    name: "mysite.com"
 
-    # Nginx related config
+    # for python application only, the application entry point, ie: `server:app`
+    application: "run_mysite:flask_app"
+
+    # A list of key/value pairs in the form KEY="val",KEY2="val2" that will be placed in the supervisord process’ environment
+    environment: ""
+
+    # NGINX
+    # The config below is optional.
     nginx:
+      # Port, optional. Propel will launch the sites on port 80 by default
       port: 80
-      server_name: "mysite.com"  # Optional if the server name is different than name, or has multiple server_name
+      # Server name options: if the server name is different than name, or has multiple server_name
+      server_name: "mysite.com"
+      # Log dir: optional
       logs_dir: ""
+      # root dir: optional
       root_dir: ""
+      # aliases: dict
       aliases:
         "/static": "mysite/static"
+      #
       force_non_www: True
+      #
       force_www: False
+      #
       server_directives: ""
+      #
       ssl_directives: ""
+      #
       ssl_cert: ""
+      #
       ssl_key: ""
 
-
-    # Gunicorn option (Optional. Python only)
+    # GUNICORN
+    # Optional. Python only
     gunicorn:
       workers: 4
       threads: 8
 
-    # To remove the site configuration
-    remove: True
+    # REMOVE
+    # When True it will  remove the site
+    remove: False
 
-  -
-    name: "sub.mysite.com"
+    # EXCLUDE
+    # When True it will not try to build the site
+    exclude: False
+
+  - name: "sub.mysite.com"
     application: "run_submysite:flask_app"
     nginx:
       aliases:
@@ -53,14 +89,20 @@ web:
       ssl_cert: "ssl/site.cert"
       ssl_key: "ssl/site.key"
     remove: False
-  -
-    name: "myphphtmlsite.com"
+
+  - name: "myphphtmlsite.com"
     nginx:
       root_dir: "html"
 
-# SCRIPTS: A dict of all scripts to execute
 
+
+# SCRIPTS
+# A dict of all scripts to execute
+# Script can be run by doing [ --scripts [script_name_1, name_2 ....]]
 scripts:
+
+  # BUILTIN SCRIPT
+  # Scripts that get executed by propel
 
   # Script to run before
   before_all:
@@ -90,6 +132,8 @@ scripts:
   undeploy:
     - command: ""
 
+  # CUSTOM SCRIPT
+
   # MY_SCRIPT_NAME: Custom script by name
   my_script_name:
     -
@@ -99,15 +143,15 @@ scripts:
       command: "$PYTHON_ENV myscript.py"
 
 
-
-# WORKERS: Run custom script or app in the background using supervisor
+# WORKERS:
+# Script or apps that run in the background using Supervisor
 workers:
 
   # To run this: propel -k managers
   managers:
     -
       name: "manager1"
-      command: "$PYTHON_ENV trigger.py
+      command: "$PYTHON_ENV trigger.py"
       environment: ""
 
   # To run this: propel -k jobs
@@ -125,13 +169,6 @@ workers:
       exclude: True  # Prevent this worker from rerunning
 
 
-# MAINTENANCE: To turn on/off maintenance programmatically
-maintenance:
-  active: True  # Bool to turn on and off maintenance
-  page: "maintenance/index.html" # The maintenance page to use instead of the default, relative to the site's root
-  allow_ips: # List of ips to allow to view the site
-    - 1.2.4.5
-    - 2.3.4.5
 
 
 

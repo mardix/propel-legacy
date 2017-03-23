@@ -1,3 +1,13 @@
+0.50.6
+    - Break backward compatibility
+    - New command: -w | --webs to deploy site by name, ie: `propel -w mysite.com`
+    - New command: --all-webs : To deploy all sites
+    - New command: --status : show only the propel status
+    - command --ps removed
+    - command --websites removed
+    - maintenance mode has been deprecated
+
+
 0.43.0
     - workers are now k/v of dict workers
 

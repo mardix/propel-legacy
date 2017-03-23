@@ -50,7 +50,7 @@ by running the following commands:
             
 1. Inside of your app directory run:
 
-        propel -w
+        propel -w mysitename.com
     
 1. Now go to `http://mysitename.com`
     
@@ -144,11 +144,18 @@ Let's say my application is at: `/home/myapp.com/www`
 	
 From there you can run the commands below:
 
-#### propel -w | --websites
+#### propel --all-webs
 
-To deploy websites. It will also run scripts.before_web and scripts.after_web
+To deploy all websites. It will also run scripts.before_web and scripts.after_web
 
-    propel -w
+    propel --all-webs
+
+
+#### propel -w | --webs [site.com, [site...]]
+
+To deploy site by name. It will also run scripts.before_web and scripts.after_web
+
+    propel -w mysite.com mysecondsite.com
 
 
     
@@ -177,7 +184,9 @@ To undeploy all. It will remove sites, scripts, workers, and destroy the virtual
     propel --undeploy
 
 
-### propel -m | --maintenance on|off
+### propel -m | --maintenance on|off  
+
+(This has been deprecated)
 
 To activate/deactivate the site maintenance page
 
@@ -204,11 +213,11 @@ To reload Nginx servers and refresh Supervisors config
 
     propel --reload
 
-### propel --ps
+### propel --status
 
-To list all the running applications. Running applications are active apps on Supervisor.
+To show the status of all running Propel application. Running applications are active apps on Supervisor.
 
-    propel -ps
+    propel --status
     
     
 ### propel --restart
@@ -439,6 +448,8 @@ For more config, please refer to: http://docs.gunicorn.org/en/develop/configure.
 
 
 #### Maintenance config
+
+*Deprecated
 
 The maintenance config allows you to set page to show and turn on/off automatically 
 
@@ -765,5 +776,5 @@ Mardix :)
 
 ---
 
-License: MIT - Copyright 2015 Mardix
+License: MIT - Copyright 2015 - 2017 Mardix
 

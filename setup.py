@@ -10,6 +10,18 @@ Supervisor and Nginx.
 
 For PHP/HTML sites, it just uses the path as it would in normal environment, and you must have php-fpm
 
+Requirements:
+    Nginx
+    Gunicorn
+    Supervisor
+    Gevent
+    Virtualenvwrapper
+    php-fpm
+
+@Author: Mardix
+@Copyright: 2015 - 2017 Mardix
+@license: MIT
+
 """
 
 from setuptools import setup, find_packages
