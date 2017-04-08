@@ -1016,7 +1016,7 @@ def cmd():
             _print("")
             if app.virtualenv.get("name"):
                 _print("- Virtualenv: %s" % app.virtualenv.get("name"))
-            if (arg.web or arg.all_webs) and app.deployed_info:
+            if (arg.webs or arg.all_webs) and app.deployed_info:
                 for i in app.deployed_info:
                     _print("- Webapp: %s" % i[0])
                     _print("\t Gunicorn port: %s" % i[1])
