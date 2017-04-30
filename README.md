@@ -199,12 +199,12 @@ To activate/deactivate the site maintenance page
 
 To create a new application bare repository ready to push application to. 
 
-    propel -c mynewapp
+    propel -c /home/myapp/myapp
     
     # or
     
-    # It will place the repository inside of /myother-dir
-    propel -c mynewapp --basedir=/myother-dir 
+    # It will place the repository inside of /home/myapp/myapp
+    propel -c /home/myapp/myapp
     
     
 ### propel -r | --reload

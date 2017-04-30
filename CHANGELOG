@@ -1,3 +1,10 @@
+0.60.0
+    - Now
+    - remove command --basedir when creating. Use the full path to create
+
+0.51.0
+    - You can now provide a nginx config file, that will be copied
+
 0.50.6
     - Break backward compatibility
     - New command: -w | --webs to deploy site by name, ie: `propel -w mysite.com`

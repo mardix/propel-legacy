@@ -232,7 +232,7 @@ server {
     {% if FORCE_NON_WWW %}
 
         server_name www.{{ NAME }};
-        return 301 $scheme://{{ NAME }}$request_uri;
+        return 301 $scheme://$host$request_uri;
 
     {% elif FORCE_WWW and not NAME.startswith('www.') %}
 
@@ -469,7 +469,7 @@ class Git(object):
         self.directory = directory
 
     def get_working_dir(self, repo):
-        working_dir = "%s/%s" % (self.directory, repo)
+        working_dir = repo
         bare_repo = "%s.git" % working_dir
         return working_dir, bare_repo
 
@@ -513,6 +513,12 @@ class App(object):
         self.directory = directory
         self.virtualenv = self.config["virtualenv"] if "virtualenv" in self.config else {}
 
+    def get_web_by_name(self, name):
+        if "web" in self.config:
+            for _ in self.config["web"]:
+                if _.get("name") == name:
+                    return _
+
     def publish_web(self, name=None, undeploy=False, maintenance=False, site=None):
         """
 
@@ -526,11 +532,8 @@ class App(object):
             _maintenance.update({"active": True})
 
         if not site:
-            if "web" in self.config:
-                for _ in self.config["web"]:
-                    if _.get("name") == name:
-                        site = _
-                        break
+            site = self.get_web_by_name(name)
+
         if not site:
             raise ValueError("Site '%s' doesn't exist" % name)
 
@@ -575,28 +578,19 @@ class App(object):
             settings = " ".join(["--%s %s" % (x[0], x[1]) for x in
                                  gunicorn_options.items()])
             gunicorn_bin = get_venv_bin(bin_program="gunicorn",
-                                        virtualenv=self.virtualenv.get(
-                                            "name"))
+                                        virtualenv=self.virtualenv.get("name"))
 
-            # Site not under maintenance,
-            # or is under maintenance but allow certain ips
-            #  we'll activate the site
-            if (not _maintenance["active"]) \
-                    or (_maintenance["active"] and _maintenance[
-                        "allow_ips"]):
-                command = "{GUNICORN_BIN} -b 0.0.0.0:{PROXY_PORT} {APP} {SETTINGS}" \
-                    .format(GUNICORN_BIN=gunicorn_bin,
-                            PROXY_PORT=proxy_port,
-                            APP=application,
-                            SETTINGS=settings, )
+            command = "{GUNICORN_BIN} -b 0.0.0.0:{PROXY_PORT} {APP} {SETTINGS}" \
+                .format(GUNICORN_BIN=gunicorn_bin,
+                        PROXY_PORT=proxy_port,
+                        APP=application,
+                        SETTINGS=settings, )
 
-                Supervisor.start(name=gunicorn_app_name,
-                                 command=command,
-                                 directory=directory,
-                                 user=user,
-                                 environment=environment)
-            else:
-                Supervisor.stop(name=gunicorn_app_name, remove=True)
+            Supervisor.start(name=gunicorn_app_name,
+                             command=command,
+                             directory=directory,
+                             user=user,
+                             environment=environment)
 
         logs_dir = nginx.get("logs_dir", None)
         if not logs_dir:
@@ -621,15 +615,10 @@ class App(object):
                            SSL_KEY=nginx.get("ssl_key", ""),
                            SSL_DIRECTIVES=nginx.get("ssl_directives", ""),
                            LOGS_DIR=logs_dir,
-                           MAINTENANCE={
-                               "ACTIVE": _maintenance.get("active", False),
-                               "PAGE": _maintenance.get("page", None),
-                               "ALLOW_IPS": _maintenance.get("allow_ips",
-                                                             [])}
+                           MAINTENANCE={}
                            )
             content = Template(NGINX_CONFIG).render(**context)
             f.write(content)
-
 
     def deploy_web(self, undeploy=False, maintenance=False):
         """
@@ -650,11 +639,10 @@ class App(object):
                 if "application" in site and not self.virtualenv.get("name"):
                     raise TypeError("'virtualenv' is missing for Python web/app")
                 self.publish_web(site=site)
-            reload_server()
         else:
             raise TypeError("'web' is missing in propel.yml")
 
-    def maintenance(self, is_on=True, undeploy_all=False):
+    def maintenance(self, names=[], is_on=True, undeploy_all=False):
         """
         Will put all the sites under maintenance
         To maintenance off, just deploy_web
@@ -665,40 +653,44 @@ class App(object):
             self.deploy_web(maintenance=True)
             self.run_workers(undeploy=True)
         else:
-            if "web" in self.config:
-                for site in self.config["web"]:
-                    if "name" not in site:
-                        raise TypeError("'name' is missing in sites config")
+            for name in names:
+                self._maintenance(name)
 
-                    name = site["name"]
-                    nginx = site["nginx"] if "nginx" in site else {}
-                    directory = self.directory
-                    nginx_config_file = get_domain_conf_file(name)
-                    maintenance = {"active": False, "page": None, "allow_ips": []}
+    def _maintenance(self, name):
+        """
+        Will put all the sites under maintenance
+        To maintenance off, just deploy_web
+        """
+        site = self.get_web_by_name(name)
+        if not site:
+            raise ValueError("Site '%s' doesn't exist" % name)
 
-                    with open(nginx_config_file, "wb") as f:
-                        context = dict(NAME=name,
-                                       SERVER_NAME=nginx.get("server_name", name),
-                                       DIRECTORY=directory,
-                                       PROXY_PORT=None,
-                                       PORT=nginx.get("port", NGINX_DEFAULT_PORT),
-                                       ROOT_DIR=nginx.get("root_dir", ""),
-                                       ALIASES=nginx.get("aliases", {}),
-                                       FORCE_NON_WWW=nginx.get("force_non_www", False),
-                                       FORCE_WWW=nginx.get("force_www", False),
-                                       SERVER_DIRECTIVES=nginx.get("server_directives", ""),
-                                       SSL_CERT=nginx.get("ssl_cert", ""),
-                                       SSL_KEY=nginx.get("ssl_key", ""),
-                                       SSL_DIRECTIVES=nginx.get("ssl_directives", ""),
-                                       MAINTENANCE={"ACTIVE": True,
-                                                    "PAGE": maintenance.get("page", None),
-                                                    "ALLOW_IPS": []}
-                                       )
-                        content = Template(NGINX_CONFIG).render(**context)
-                        f.write(content)
-                reload_services()
-            else:
-                raise TypeError("'web' is missing in propel.yml")
+        name = site["name"]
+        nginx = site["nginx"] if "nginx" in site else {}
+        directory = self.directory
+        nginx_config_file = get_domain_conf_file(name)
+        maintenance = {"active": False, "page": None, "allow_ips": []}
+
+        with open(nginx_config_file, "wb") as f:
+            context = dict(NAME=name,
+                           SERVER_NAME=nginx.get("server_name", name),
+                           DIRECTORY=directory,
+                           PROXY_PORT=None,
+                           PORT=nginx.get("port", NGINX_DEFAULT_PORT),
+                           ROOT_DIR=nginx.get("root_dir", ""),
+                           ALIASES=nginx.get("aliases", {}),
+                           FORCE_NON_WWW=nginx.get("force_non_www", False),
+                           FORCE_WWW=nginx.get("force_www", False),
+                           SERVER_DIRECTIVES=nginx.get("server_directives", ""),
+                           SSL_CERT=nginx.get("ssl_cert", ""),
+                           SSL_KEY=nginx.get("ssl_key", ""),
+                           SSL_DIRECTIVES=nginx.get("ssl_directives", ""),
+                           MAINTENANCE={"ACTIVE": True,
+                                        "PAGE": maintenance.get("page", None),
+                                        "ALLOW_IPS": []}
+                           )
+            content = Template(NGINX_CONFIG).render(**context)
+            f.write(content)
 
     def run_scripts(self, name):
         """
@@ -810,7 +802,6 @@ def cmd():
         parser.add_argument("-x", "--undeploy", help="To UNDEPLOY the application", action="store_true")
         parser.add_argument("-m", "--maintenance", help="Values: on|off - To set the site on maintenance. ie [--maintenance on]")
         parser.add_argument("-c", "--create", help="Create a new application repository, set the git init for web push")
-        parser.add_argument("--basedir", help="The base directory when creating a new application. By default it's /home")
         parser.add_argument("--silent", help="Disable verbosity", action="store_true")
         parser.add_argument("--status",  help="Show all the Propel statuses", action="store_true")
         parser.add_argument("--restart",  help="Restart all managed Supervisor processes", action="store_true")
@@ -846,19 +837,12 @@ def cmd():
             print("")
             exit()
 
+        # create is the full path of the application, ie /home/site/site.com
         if arg.create:
-            basedir = "/home"
-            if arg.basedir:
-                basedir = arg.basedir
+
             projectname = arg.create.lower()
-
             _print("==== CREATE NEW REPOSITORY : %s \n" % projectname)
-
-            if not os.path.isdir(basedir):
-                raise IOError("Base directory: '%s' doesn't exist")
-
-            CWD = basedir
-            project_dir = "%s/%s" % (CWD, projectname)
+            CWD = projectname
             arg.git_init = projectname
             arg.git_push_web = projectname
             arg.maintenance = False
@@ -867,8 +851,8 @@ def cmd():
             arg.scripts = False
             arg.workers = False
 
-            if not os.path.exists(project_dir):
-                os.makedirs(project_dir)
+            if not os.path.exists(CWD):
+                os.makedirs(CWD)
 
         git = Git(CWD)
         app = None
@@ -904,14 +888,15 @@ def cmd():
             # Global maintenance - maintenance["active"]= True only, ips must be empty
             _m = app.config.get("maintenance")
             if _m and _m.get("active") is True and not _m.get("allow_ips"):
-                app.maintenance(undeploy_all=True)
+                app.maintenance(names=arg.webs, undeploy_all=True)
                 _print("::: GLOBAL MAINTENANCE :::")
                 _print("")
                 exit()
 
-            # Auto maintenance before doing any web deployment
+            # MAINTENACE Auto maintenance before doing any web deployment
             if arg.webs or arg.all_webs:
-                app.maintenance()
+                _print("=== Setup maintenance ...")
+                app.maintenance(names=arg.webs)
 
             # Virtualenv
             if app.virtualenv.get("name"):
@@ -931,6 +916,15 @@ def cmd():
             _print("==== Running script: 'before_all' ...")
             app.run_scripts("before_all")
 
+            # Scripts. Scripts must run before web or workers, as they may contain
+            # necessary commands
+
+            if arg.scripts:
+                _print("::: RUN SCRIPTS :::")
+                for name in arg.scripts:
+                    _print("====  Scripts: %s ..." % name)
+                    app.run_scripts(name)
+
             # Web
             if arg.webs or arg.all_webs:
                 _print("::: DEPLOY WEBSITES :::")
@@ -942,7 +936,6 @@ def cmd():
                     for name in arg.webs:
                         _print("==== Deploying site: %s ... " % name)
                         app.publish_web(name=name)
-                    reload_server()
                 else:
                     _print("==== Deploying ALL WEBS ... ")
                     app.deploy_web()
@@ -967,19 +960,17 @@ def cmd():
             _print("==== Running script: 'after_all' ...")
             app.run_scripts("after_all")
 
-            # Scripts
-            if arg.scripts:
-                _print("::: RUN SCRIPTS :::")
-                for name in arg.scripts:
-                    _print("====  Scripts: %s ..." % name)
-                    app.run_scripts(name)
+            if arg.webs or arg.all_webs:
+                _print("==== Reloading NGINX ...")
+                reload_server()
+
 
         # Extra
         else:
             if arg.git_init:
                 repo = arg.git_init
-                bare_repo = "%s/%s.git" % (CWD, repo)
-                directory = "%s/%s" % (CWD, repo)
+                bare_repo = "%s.git" % repo
+                directory = "%s" % repo
                 _print(":: GIT INIT BARE REPO ::")
                 if git.init_bare_repo(repo):
                     git.update_post_receive_hook(repo, False)
