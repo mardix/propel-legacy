@@ -44,7 +44,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'jinja2==2.7.3',
-        'pyyaml==3.11',
+        'pyyaml==5.1',
         'virtualenvwrapper==4.5.1'
     ],
     keywords=['deploy', 'propel', 'flask', 'gunicorn', 'django', 'workers', 'deploy sites', 'deployapp'],
