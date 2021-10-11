@@ -43,7 +43,7 @@ setup(
                                        'propel-setup=propel:setup_propel']),
     packages=find_packages(),
     install_requires=[
-        'jinja2==2.7.3',
+        'jinja2==2.11.3',
         'pyyaml==3.11',
         'virtualenvwrapper==4.5.1'
     ],
