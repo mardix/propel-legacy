@@ -28,7 +28,7 @@ import socket
 import subprocess
 import sys
 
-from __about__ import *
+from .__about__ import *
 
 try:
     import yaml
